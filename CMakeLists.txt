@@ -90,22 +90,38 @@ if(ENABLE_COVERAGE)
             DEPENDS pydcov
         )
     elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        # Find LLVM tools (they might be versioned on Ubuntu)
+        find_program(LLVM_PROFDATA_EXECUTABLE NAMES llvm-profdata llvm-profdata-18 llvm-profdata-17 llvm-profdata-16 llvm-profdata-15 llvm-profdata-14)
+        find_program(LLVM_COV_EXECUTABLE NAMES llvm-cov llvm-cov-18 llvm-cov-17 llvm-cov-16 llvm-cov-15 llvm-cov-14)
+
+        if(NOT LLVM_PROFDATA_EXECUTABLE)
+            message(FATAL_ERROR "llvm-profdata not found. Please install LLVM tools.")
+        endif()
+
+        if(NOT LLVM_COV_EXECUTABLE)
+            message(FATAL_ERROR "llvm-cov not found. Please install LLVM tools.")
+        endif()
+
+        message(STATUS "Found llvm-profdata: ${LLVM_PROFDATA_EXECUTABLE}")
+        message(STATUS "Found llvm-cov: ${LLVM_COV_EXECUTABLE}")
+
         # Clang/llvm-cov coverage
         add_custom_target(coverage-clean
             COMMAND find ${CMAKE_BINARY_DIR} -name "*.profraw" -delete
             COMMAND find ${CMAKE_BINARY_DIR} -name "*.profdata" -delete
             COMMENT "Cleaning coverage data"
         )
-        
+
         add_custom_target(coverage-merge
-            COMMAND llvm-profdata merge -sparse ${CMAKE_BINARY_DIR}/*.profraw -o ${CMAKE_BINARY_DIR}/coverage/coverage.profdata
-            COMMENT "Merging coverage data"
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
+            COMMAND ${LLVM_PROFDATA_EXECUTABLE} merge -sparse ${CMAKE_BINARY_DIR}/*.profraw -o ${CMAKE_BINARY_DIR}/coverage/coverage.profdata
+            COMMENT "Merging coverage data with ${LLVM_PROFDATA_EXECUTABLE}"
         )
-        
+
         add_custom_target(coverage-report
-            COMMAND llvm-cov show ${CMAKE_BINARY_DIR}/pydcov -instr-profile=${CMAKE_BINARY_DIR}/coverage/coverage.profdata -format=html -output-dir=${CMAKE_BINARY_DIR}/coverage/html
-            COMMAND llvm-cov export ${CMAKE_BINARY_DIR}/pydcov -instr-profile=${CMAKE_BINARY_DIR}/coverage/coverage.profdata -format=lcov > ${CMAKE_BINARY_DIR}/coverage/coverage.info
-            COMMENT "Generating coverage report"
+            COMMAND ${LLVM_COV_EXECUTABLE} show ${CMAKE_BINARY_DIR}/pydcov -instr-profile=${CMAKE_BINARY_DIR}/coverage/coverage.profdata -format=html -output-dir=${CMAKE_BINARY_DIR}/coverage/html
+            COMMAND ${LLVM_COV_EXECUTABLE} export ${CMAKE_BINARY_DIR}/pydcov -instr-profile=${CMAKE_BINARY_DIR}/coverage/coverage.profdata -format=lcov > ${CMAKE_BINARY_DIR}/coverage/coverage.info
+            COMMENT "Generating coverage report with ${LLVM_COV_EXECUTABLE}"
             DEPENDS coverage-merge pydcov
         )
     endif()

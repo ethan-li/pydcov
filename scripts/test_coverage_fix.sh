@@ -43,7 +43,7 @@ log_info "Testing compiler detection..."
 if command -v gcc >/dev/null 2>&1; then
     GCC_VERSION=$(gcc --version | head -n1)
     log_info "Found GCC: $GCC_VERSION"
-    
+
     # Check if it's really GCC or Clang masquerading as GCC
     if gcc --version | grep -q "clang"; then
         log_warning "gcc command is actually Clang (common on macOS)"
@@ -55,6 +55,41 @@ if command -v gcc >/dev/null 2>&1; then
 else
     log_warning "GCC not found, will use Clang"
     USE_CLANG=true
+fi
+
+# Test LLVM tools if using Clang
+if [ "$USE_CLANG" = "true" ]; then
+    log_info "Checking for LLVM tools..."
+
+    # Check for llvm-profdata
+    LLVM_PROFDATA=""
+    for tool in llvm-profdata llvm-profdata-18 llvm-profdata-17 llvm-profdata-16 llvm-profdata-15 llvm-profdata-14; do
+        if command -v "$tool" >/dev/null 2>&1; then
+            LLVM_PROFDATA="$tool"
+            break
+        fi
+    done
+
+    # Check for llvm-cov
+    LLVM_COV=""
+    for tool in llvm-cov llvm-cov-18 llvm-cov-17 llvm-cov-16 llvm-cov-15 llvm-cov-14; do
+        if command -v "$tool" >/dev/null 2>&1; then
+            LLVM_COV="$tool"
+            break
+        fi
+    done
+
+    if [ -n "$LLVM_PROFDATA" ]; then
+        log_success "Found llvm-profdata: $LLVM_PROFDATA"
+    else
+        log_warning "llvm-profdata not found - coverage may fail"
+    fi
+
+    if [ -n "$LLVM_COV" ]; then
+        log_success "Found llvm-cov: $LLVM_COV"
+    else
+        log_warning "llvm-cov not found - coverage may fail"
+    fi
 fi
 
 # Test 2: Build with coverage
