@@ -20,21 +20,26 @@ A focused sample project demonstrating how to measure code coverage for C code t
 pydcov/
 ├── src/                    # C source code
 │   ├── algorithm.h         # Header file with dynamic array declarations
-│   ├── algorithm.c         # C90-compliant dynamic array implementation
-│   └── main.cpp            # C++ command-line wrapper
+│   ├── algorithm.c         # C90-compliant dynamic array implementation (70 lines)
+│   └── main.cpp            # C++ command-line wrapper (237 lines)
 ├── tests/                  # Python test suite
-│   ├── conftest.py         # Pytest configuration and fixtures
-│   ├── test_utils.py       # Test utilities and helpers
-│   └── test_dynarray.py    # Dynamic array tests
+│   ├── conftest.py         # Pytest configuration and fixtures (135 lines)
+│   ├── test_utils.py       # Test utilities and helpers (156 lines)
+│   └── test_dynarray.py    # Dynamic array tests - 16 test cases (251 lines)
 ├── scripts/                # Build and coverage scripts
-│   ├── coverage.sh         # Coverage collection script
-│   └── install_deps.sh     # Dependency installation script
+│   ├── coverage.sh         # Coverage collection script (263 lines)
+│   ├── install_deps.sh     # Dependency installation script (290 lines)
+│   ├── test_coverage_fix.sh # Coverage verification script (217 lines)
+│   └── verify_deployment.sh # Pre-deployment verification (271 lines)
 ├── .github/workflows/      # CI/CD configuration
-│   └── ci.yml              # GitHub Actions workflow
-├── CMakeLists.txt          # CMake build configuration
-├── Makefile                # Make build configuration
-└── requirements.txt        # Python dependencies
+│   └── ci.yml              # GitHub Actions workflow (217 lines)
+├── CMakeLists.txt          # CMake build configuration (138 lines)
+├── requirements.txt        # Python dependencies (5 lines)
+├── EXAMPLES.md             # Detailed usage examples (251 lines)
+└── LICENSE                 # MIT license
 ```
+
+**Total Project Size**: ~2,900 lines across 16 files
 
 ## Quick Start
 
@@ -58,16 +63,17 @@ pydcov/
    ```
 
 3. **Or install manually**:
-   
+
    **On Ubuntu/Debian**:
    ```bash
-   sudo apt-get install build-essential gcc g++ clang cmake lcov python3 python3-pip
+   sudo apt-get update
+   sudo apt-get install build-essential gcc g++ clang llvm cmake lcov python3 python3-pip
    pip3 install pytest pytest-cov pytest-xdist pytest-html coverage
    ```
-   
+
    **On macOS**:
    ```bash
-   brew install llvm lcov
+   brew install llvm lcov cmake
    pip3 install pytest pytest-cov pytest-xdist pytest-html coverage
    ```
 
@@ -75,7 +81,10 @@ pydcov/
 
 1. **Build the project**:
    ```bash
+   mkdir -p build && cd build
+   cmake .. -DCMAKE_BUILD_TYPE=Release
    make
+   cd ..
    ```
 
 2. **Run tests**:
@@ -85,9 +94,18 @@ pydcov/
 
 3. **Generate coverage report**:
    ```bash
-   make coverage
+   # Clean and build with coverage
+   rm -rf build && mkdir -p build && cd build
+   cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+   make
+   cd ..
+
+   # Run tests with coverage
+   export LLVM_PROFILE_FILE="build/coverage-%p.profraw"  # For Clang
    python3 -m pytest tests/ -v
-   make coverage-report
+
+   # Generate coverage report
+   cd build && make coverage-report
    ```
 
 4. **View coverage report**:
@@ -181,18 +199,42 @@ main.cpp                          220                20    90.91%          10   
 TOTAL                             434                38    91.24%          26                 1    96.15%         518                75    85.52%
 ```
 
-## CI/CD Integration
+## CI/CD Pipeline
 
-### GitHub Actions
+### GitHub Actions Workflow
 
-The project includes a complete GitHub Actions workflow that:
+The project includes a robust CI/CD pipeline with a **3-job matrix** that ensures cross-platform compatibility:
 
-- **Tests on multiple platforms**: Ubuntu and macOS
-- **Tests with multiple compilers**: GCC and Clang
-- **Generates coverage reports**: For each platform/compiler combination
-- **Uploads to Codecov**: Automatic coverage reporting
-- **Deploys documentation**: Coverage reports to GitHub Pages
-- **Creates releases**: Automated binary releases
+#### **Test Matrix**
+```yaml
+matrix:
+  os: [ubuntu-latest, macos-latest]
+  compiler: [gcc, clang]
+  exclude:
+    - os: macos-latest
+      compiler: gcc  # macOS uses Clang by default
+```
+
+**Resulting Jobs:**
+- ✅ **ubuntu-latest + gcc**: Linux with GCC and gcov coverage
+- ✅ **ubuntu-latest + clang**: Linux with Clang and llvm-cov coverage
+- ✅ **macos-latest + clang**: macOS with Clang and llvm-cov coverage
+
+#### **Pipeline Features**
+- **Cross-platform testing**: Ensures compatibility on both Linux and macOS
+- **Multi-compiler support**: Tests with both GCC and Clang compilers
+- **Automated dependency installation**: Platform-specific package installation
+- **Coverage generation**: Comprehensive coverage reports for each combination
+- **Artifact upload**: Coverage reports and build artifacts
+- **Codecov integration**: Automatic coverage reporting and badges
+- **Error handling**: Robust error handling for coverage tool detection
+
+#### **Recent CI Improvements**
+The pipeline includes recent fixes for common CI issues:
+- **Linux GCC lcov errors**: Fixed "exclude pattern unused" errors with proper ignore flags
+- **Ubuntu Clang LLVM tools**: Automatic detection of versioned LLVM tools (llvm-profdata-14, etc.)
+- **Coverage tool detection**: Robust fallback mechanisms for different tool versions
+- **Enhanced error handling**: Comprehensive error tolerance for coverage generation
 
 ### Setting Up CI
 
@@ -200,6 +242,13 @@ The project includes a complete GitHub Actions workflow that:
 
 2. **Add Codecov integration** (optional):
    - Sign up at [codecov.io](https://codecov.io)
+   - Connect your GitHub repository
+   - Public repositories work automatically
+
+3. **Monitor CI runs**:
+   - Check the **Actions** tab in your GitHub repository
+   - All 3 jobs should complete successfully
+   - Coverage reports are uploaded as artifacts
    - Add your repository
    - No additional secrets needed for public repositories
 
@@ -217,53 +266,57 @@ The workflow can be customized by modifying `.github/workflows/ci.yml`:
 - **Change Python version**: Modify the `python-version` in setup steps
 - **Add deployment targets**: Add steps for deploying to other services
 
-## Build Systems
+## Build System
 
-The project supports both Make and CMake:
+The project uses **CMake** as its build system, providing cross-platform compatibility and modern C++ project standards.
 
-### Using Make
+### CMake Configuration
+
+**Key Features:**
+- **C90 compliance** for algorithm implementation
+- **C++11 standard** for CLI wrapper
+- **Coverage support** with `ENABLE_COVERAGE` option
+- **Cross-platform** compatibility (Linux, macOS, Windows)
+- **Automatic tool detection** for GCC/gcov and Clang/llvm-cov
+
+### Build Commands
 
 ```bash
-# Create build directory
-mkdir -p build
-cd build
-
 # Basic build
+mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 
 # Coverage build
+mkdir -p build && cd build
 cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
 make
 
 # Generate coverage report
-make coverage-report
+cd build && make coverage-report
 
-# Clean
-cd .. && rm -rf build
+# Clean build
+rm -rf build
 
-# Install
+# Install (optional)
+mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make install
-```
-# Configure and build
-mkdir build && cd build
-cmake .. -DENABLE_COVERAGE=ON
-make
-
-# Generate coverage report
-make coverage-report
 ```
 
 ## Testing
 
-### Test Structure
+### Test Suite Overview
 
-The test suite focuses on dynamic array functionality:
+The project includes a comprehensive test suite with **16 test cases** covering all dynamic array functionality:
 
-- **test_dynarray.py**: Comprehensive dynamic array tests (create, push, pop, get, error handling)
-- **test_utils.py**: Test utilities and command execution helpers
-- **conftest.py**: pytest configuration and fixtures
+- **test_dynarray.py**: 16 comprehensive dynamic array tests (251 lines)
+  - Basic operations (create, push, pop, get)
+  - Error handling and edge cases
+  - Memory management and expansion
+  - File persistence and cleanup
+- **test_utils.py**: Test utilities and command execution helpers (156 lines)
+- **conftest.py**: pytest configuration and fixtures (135 lines)
 
 ### Running Tests
 
