@@ -79,12 +79,13 @@ if(ENABLE_COVERAGE)
             COMMAND ${CMAKE_COMMAND} -E echo "Checking for coverage files..."
             COMMAND find ${CMAKE_BINARY_DIR} -name "*.gcda" -o -name "*.gcno" | head -10
             COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage data..."
-            COMMAND lcov --capture --directory ${CMAKE_BINARY_DIR} --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov,source
+            COMMAND lcov --capture --directory ${CMAKE_BINARY_DIR} --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc branch_coverage=1 --ignore-errors gcov,source,unused
             COMMAND ${CMAKE_COMMAND} -E echo "Removing system files from coverage..."
-            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '/usr/*' '*/usr/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc lcov_branch_coverage=1
-            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '*/test/*' '*/tests/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc lcov_branch_coverage=1
+            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '/usr/*' '*/usr/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc branch_coverage=1 --ignore-errors unused,source
+            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '*/test/*' '*/tests/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc branch_coverage=1 --ignore-errors unused,source
             COMMAND ${CMAKE_COMMAND} -E echo "Generating HTML report..."
-            COMMAND genhtml ${CMAKE_BINARY_DIR}/coverage/coverage.info --output-directory ${CMAKE_BINARY_DIR}/coverage/html --rc lcov_branch_coverage=1 --ignore-errors source
+            COMMAND genhtml ${CMAKE_BINARY_DIR}/coverage/coverage.info --output-directory ${CMAKE_BINARY_DIR}/coverage/html --rc branch_coverage=1 --ignore-errors source,unused
+            COMMAND ${CMAKE_COMMAND} -E echo "Coverage report generated successfully!"
             COMMENT "Generating coverage report with GCC/gcov"
             DEPENDS pydcov
         )
