@@ -42,7 +42,7 @@ pydcov/
 
 - **C Compiler**: GCC or Clang
 - **Python 3.7+**: For running tests
-- **Make or CMake**: For building the project
+- **CMake 3.15+**: For building the project
 
 ### Installation
 
@@ -142,8 +142,12 @@ The project includes a comprehensive coverage script that handles the entire wor
 
 1. **Clean and build with coverage**:
    ```bash
-   make coverage-clean
-   make coverage-build
+   rm -rf build
+   mkdir -p build
+   cd build
+   cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+   make
+   cd ..
    ```
 
 2. **Run tests with coverage**:
@@ -151,13 +155,14 @@ The project includes a comprehensive coverage script that handles the entire wor
    # For Clang
    export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
    python3 -m pytest tests/ -v
-   
+
    # For GCC (no special environment needed)
    python3 -m pytest tests/ -v
    ```
 
 3. **Generate coverage report**:
    ```bash
+   cd build
    make coverage-report
    ```
 
@@ -219,25 +224,28 @@ The project supports both Make and CMake:
 ### Using Make
 
 ```bash
+# Create build directory
+mkdir -p build
+cd build
+
 # Basic build
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 
 # Coverage build
-make coverage-build
+cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+make
 
 # Generate coverage report
 make coverage-report
 
 # Clean
-make clean
+cd .. && rm -rf build
 
 # Install
+cmake .. -DCMAKE_BUILD_TYPE=Release
 make install
 ```
-
-### Using CMake
-
-```bash
 # Configure and build
 mkdir build && cd build
 cmake .. -DENABLE_COVERAGE=ON
@@ -304,7 +312,8 @@ sudo apt-get install lcov
 **Tests failing due to missing executable**:
 ```bash
 # Make sure to build first
-make clean && make
+rm -rf build && mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release && make
 ```
 
 **Permission denied on scripts**:

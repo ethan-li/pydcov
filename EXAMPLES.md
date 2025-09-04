@@ -12,7 +12,9 @@ git clone https://github.com/your-username/pydcov.git
 cd pydcov
 
 # Build the project
-make clean && make
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release && make
+cd ..
 
 # Run all tests
 python3 -m pytest tests/ -v
@@ -76,8 +78,10 @@ The project implements a dynamic array data structure accessible via command-lin
 
 ```bash
 # Build with GCC coverage
-make clean
-CC=gcc CXX=g++ make coverage-build
+rm -rf build && mkdir -p build && cd build
+CC=gcc CXX=g++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+make
+cd ..
 
 # Run tests (gcov automatically collects data)
 python3 -m pytest tests/ -v
@@ -96,8 +100,10 @@ open build/coverage/html/index.html
 export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 
 # Build with Clang coverage
-make clean
-CC=clang CXX=clang++ make coverage-build
+rm -rf build && mkdir -p build && cd build
+CC=clang CXX=clang++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+make
+cd ..
 
 # Set up coverage data collection
 export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
@@ -232,12 +238,14 @@ strategy:
 ```bash
 # Simulate the CI workflow locally
 ./scripts/install_deps.sh
-make clean && make
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release && make
+cd .. && python3 -m pytest tests/ -v
+rm -rf build && mkdir -p build && cd build
+cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug && make
+cd .. && export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
 python3 -m pytest tests/ -v
-make coverage-build
-export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
-python3 -m pytest tests/ -v
-make coverage-report
+cd build && make coverage-report
 ```
 
 This comprehensive example set demonstrates how to use PyDCov for various scenarios, from basic usage to advanced integration and customization.

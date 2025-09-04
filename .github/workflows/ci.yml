@@ -74,7 +74,9 @@ jobs:
 
     - name: Build project
       run: |
-        make clean
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
         make
 
     - name: Run tests (without coverage)
@@ -83,8 +85,11 @@ jobs:
 
     - name: Build with coverage
       run: |
-        make clean
-        make coverage-build
+        rm -rf build
+        mkdir -p build
+        cd build
+        cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+        make
 
     - name: Run tests with coverage
       run: |
@@ -92,6 +97,7 @@ jobs:
 
     - name: Generate coverage report
       run: |
+        cd build
         make coverage-report
 
     - name: Upload coverage to Codecov
@@ -129,14 +135,16 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential gcc g++ lcov
+        sudo apt-get install -y build-essential gcc g++ cmake lcov
         python -m pip install --upgrade pip
         pip install pytest pytest-cov pytest-xdist pytest-html coverage
 
     - name: Build project with coverage
       run: |
-        make clean
-        CC=gcc CXX=g++ make coverage-build
+        mkdir -p build
+        cd build
+        CC=gcc CXX=g++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+        make
 
     - name: Run tests
       run: |
@@ -144,6 +152,7 @@ jobs:
 
     - name: Generate coverage report
       run: |
+        cd build
         make coverage-report
 
     - name: Deploy coverage report to GitHub Pages
@@ -167,15 +176,17 @@ jobs:
     - name: Set up build environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential gcc g++
+        sudo apt-get install -y build-essential gcc g++ cmake
 
     - name: Build release binaries
       run: |
-        make clean
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
         make
-        mkdir -p dist
-        cp build/pydcov dist/pydcov-linux-x64
-        strip dist/pydcov-linux-x64
+        mkdir -p ../dist
+        cp pydcov ../dist/pydcov-linux-x64
+        strip ../dist/pydcov-linux-x64
 
     - name: Create release archive
       run: |
