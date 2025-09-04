@@ -24,11 +24,13 @@ if(ENABLE_COVERAGE)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU")
         set(COVERAGE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
         set(COVERAGE_LIBS "gcov")
+        message(STATUS "Using GCC coverage with gcov")
     elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         set(COVERAGE_FLAGS "-fprofile-instr-generate -fcoverage-mapping")
         set(COVERAGE_LIBS "")
+        message(STATUS "Using Clang coverage with llvm-cov")
     endif()
-    
+
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COVERAGE_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COVERAGE_FLAGS}")
@@ -73,12 +75,17 @@ if(ENABLE_COVERAGE)
         )
         
         add_custom_target(coverage-report
-            COMMAND gcov -r ${CMAKE_SOURCE_DIR}/src/*.c
-            COMMAND lcov --capture --directory ${CMAKE_BINARY_DIR} --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info
-            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '/usr/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info
-            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '*/test/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info
-            COMMAND genhtml ${CMAKE_BINARY_DIR}/coverage/coverage.info --output-directory ${CMAKE_BINARY_DIR}/coverage/html
-            COMMENT "Generating coverage report"
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
+            COMMAND ${CMAKE_COMMAND} -E echo "Checking for coverage files..."
+            COMMAND find ${CMAKE_BINARY_DIR} -name "*.gcda" -o -name "*.gcno" | head -10
+            COMMAND ${CMAKE_COMMAND} -E echo "Capturing coverage data..."
+            COMMAND lcov --capture --directory ${CMAKE_BINARY_DIR} --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc lcov_branch_coverage=1 --ignore-errors gcov,source
+            COMMAND ${CMAKE_COMMAND} -E echo "Removing system files from coverage..."
+            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '/usr/*' '*/usr/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc lcov_branch_coverage=1
+            COMMAND lcov --remove ${CMAKE_BINARY_DIR}/coverage/coverage.info '*/test/*' '*/tests/*' --output-file ${CMAKE_BINARY_DIR}/coverage/coverage.info --rc lcov_branch_coverage=1
+            COMMAND ${CMAKE_COMMAND} -E echo "Generating HTML report..."
+            COMMAND genhtml ${CMAKE_BINARY_DIR}/coverage/coverage.info --output-directory ${CMAKE_BINARY_DIR}/coverage/html --rc lcov_branch_coverage=1 --ignore-errors source
+            COMMENT "Generating coverage report with GCC/gcov"
             DEPENDS pydcov
         )
     elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")

@@ -88,11 +88,18 @@ jobs:
         rm -rf build
         mkdir -p build
         cd build
-        cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+        # Force specific compiler for coverage
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          CC=gcc CXX=g++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+        else
+          CC=clang CXX=clang++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+        fi
         make
 
     - name: Run tests with coverage
       run: |
+        # Ensure the executable path is correct for tests
+        export PYDCOV_EXECUTABLE="./build/pydcov"
         python -m pytest tests/ -v --tb=short
 
     - name: Generate coverage report
