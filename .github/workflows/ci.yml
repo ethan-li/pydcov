@@ -96,7 +96,7 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: build/coverage/coverage.info
         flags: unittests
@@ -104,7 +104,7 @@ jobs:
         fail_ci_if_error: false
 
     - name: Upload coverage artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.os }}-${{ matrix.compiler }}
         path: |
@@ -184,7 +184,7 @@ jobs:
         cd ..
 
     - name: Upload release artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-binaries
         path: dist/
