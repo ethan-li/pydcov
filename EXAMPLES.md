@@ -16,14 +16,95 @@ mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release && make
 cd ..
 
-# Run all tests
-python3 -m pytest tests/ -v
+# Run all tests (using any testing framework)
+python3 -m pytest tests/ -v                    # pytest
+python3 -m unittest discover tests/            # unittest
+green tests/                                   # green test runner
 
-# Generate coverage report
-make coverage-build
-export LLVM_PROFILE_FILE="build/coverage-%p.profraw"  # For Clang
-python3 -m pytest tests/ -v
-make coverage-report
+# Generate coverage report using Python tools
+python3 coverage_tools/scripts/coverage.py full tests/ -v
+```
+
+## Testing Framework Examples
+
+The PyDCov coverage tools support multiple testing frameworks. Here are examples using different approaches:
+
+### Using pytest (Default)
+
+```bash
+# Basic coverage workflow with pytest
+python3 coverage_tools/scripts/coverage.py clean
+python3 coverage_tools/scripts/coverage.py build
+python3 coverage_tools/scripts/coverage.py test tests/
+python3 coverage_tools/scripts/coverage.py report
+
+# Complete workflow in one command
+python3 coverage_tools/scripts/coverage.py full python -m pytest tests/ -v
+
+# Incremental coverage with pytest
+python3 coverage_tools/scripts/incremental_coverage.py init
+python3 coverage_tools/scripts/incremental_coverage.py add python -m pytest tests/test_dynarray.py -v
+python3 coverage_tools/scripts/incremental_coverage.py add python -m pytest tests/test_statistics.py -k "test_mean"
+python3 coverage_tools/scripts/incremental_coverage.py merge
+python3 coverage_tools/scripts/incremental_coverage.py report
+```
+
+### Using unittest
+
+```bash
+# Standard unittest discovery
+python3 coverage_tools/scripts/coverage.py test python -m unittest discover tests/
+python3 coverage_tools/scripts/coverage.py full python -m unittest discover tests/
+
+# Specific unittest modules
+python3 coverage_tools/scripts/incremental_coverage.py add python -m unittest tests.test_dynarray
+python3 coverage_tools/scripts/incremental_coverage.py add python -m unittest tests.test_statistics
+
+# Module-specific testing with unittest
+python3 coverage_tools/scripts/coverage_modules.py test algorithm --test-command python -m unittest discover algorithm/tests/
+python3 coverage_tools/scripts/coverage_modules.py full statistics --test-command python -m unittest discover statistics/tests/
+```
+
+### Using Custom Test Scripts
+
+```bash
+# Create a custom test script
+cat > run_custom_tests.sh << 'EOF'
+#!/bin/bash
+echo "Running custom test suite..."
+python3 -m unittest discover tests/ -v
+echo "Running additional validation..."
+./build/algorithm_cli --test
+./build/statistics_cli --test
+EOF
+chmod +x run_custom_tests.sh
+
+# Use custom script with coverage tools
+python3 coverage_tools/scripts/coverage.py test ./run_custom_tests.sh
+python3 coverage_tools/scripts/coverage.py full ./run_custom_tests.sh
+
+# Incremental coverage with custom commands
+python3 coverage_tools/scripts/incremental_coverage.py init
+python3 coverage_tools/scripts/incremental_coverage.py add ./run_custom_tests.sh
+python3 coverage_tools/scripts/incremental_coverage.py add make test
+python3 coverage_tools/scripts/incremental_coverage.py merge
+python3 coverage_tools/scripts/incremental_coverage.py report
+```
+
+### Using Other Testing Frameworks
+
+```bash
+# Using green test runner
+python3 coverage_tools/scripts/coverage.py test green tests/
+python3 coverage_tools/scripts/coverage.py full green tests/ -v
+
+# Using nose2
+python3 coverage_tools/scripts/coverage.py test nose2 tests/
+python3 coverage_tools/scripts/incremental_coverage.py add nose2 tests/ --verbose
+
+# Using make targets
+python3 coverage_tools/scripts/coverage.py test make test
+python3 coverage_tools/scripts/coverage.py full make check
 ```
 
 ### Command-Line Interface Examples
@@ -55,21 +136,23 @@ The project implements a dynamic array data structure accessible via command-lin
 
 ## Coverage Workflow Examples
 
-### Using the Coverage Script
+### Using the Python Coverage Tools
 
 ```bash
 # Full automated workflow
-./scripts/coverage.sh
+python3 coverage_tools/scripts/coverage.py full tests/
 
 # Step-by-step workflow
-./scripts/coverage.sh clean     # Clean previous coverage data
-./scripts/coverage.sh build     # Build with coverage instrumentation
-./scripts/coverage.sh test      # Run tests with coverage collection
-./scripts/coverage.sh report    # Generate coverage reports
+python3 coverage_tools/scripts/coverage.py clean     # Clean previous coverage data
+python3 coverage_tools/scripts/coverage.py build     # Build with coverage instrumentation
+python3 coverage_tools/scripts/coverage.py test tests/  # Run tests with coverage collection
+python3 coverage_tools/scripts/coverage.py report    # Generate coverage reports
 
-# Using specific compilers
-./scripts/coverage.sh full gcc   # Use GCC with gcov
-./scripts/coverage.sh full clang # Use Clang with llvm-cov
+# Check status
+python3 coverage_tools/scripts/coverage.py status
+
+# Get help for any command
+python3 coverage_tools/scripts/coverage.py help
 ```
 
 ### Manual Coverage Workflow

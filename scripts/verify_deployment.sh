@@ -45,7 +45,7 @@ REQUIRED_FILES=(
     "tests/test_dynarray.py"
     "tests/test_utils.py"
     "tests/conftest.py"
-    "scripts/coverage.sh"
+    "coverage_tools/scripts/coverage.py"
     "scripts/install_deps.sh"
     ".github/workflows/ci.yml"
     "Makefile"

@@ -11,35 +11,49 @@ from pathlib import Path
 
 def get_project_root():
     """Get the project root directory."""
-    return Path(__file__).parent.parent
+    # This file is in algorithm/tests/, so project root is two levels up
+    return Path(__file__).parent.parent.parent
 
 
 def get_executable_path():
-    """Get the path to the compiled executable."""
+    """Get the path to the compiled algorithm CLI executable."""
     project_root = get_project_root()
-    
-    # Try different possible locations
+
+    # Try different possible locations for the new modular structure
     possible_paths = [
+        # New modular structure paths
+        project_root / "build" / "algorithm" / "app" / "algorithm_cli",
+        project_root / "algorithm" / "app" / "algorithm_cli",
+        project_root / "build" / "Debug" / "algorithm" / "app" / "algorithm_cli",
+        project_root / "build" / "Release" / "algorithm" / "app" / "algorithm_cli",
+        # Legacy paths for backward compatibility
         project_root / "build" / "pydcov",
         project_root / "pydcov",
         project_root / "build" / "Debug" / "pydcov",
         project_root / "build" / "Release" / "pydcov"
     ]
-    
+
     for path in possible_paths:
         if path.exists() and path.is_file():
             return str(path)
-    
-    # If not found, try to find it in PATH
+
+    # If not found, try to find algorithm_cli in PATH
+    try:
+        result = subprocess.run(["which", "algorithm_cli"], capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError:
+        pass
+
+    # Try legacy pydcov in PATH
     try:
         result = subprocess.run(["which", "pydcov"], capture_output=True, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         pass
-    
+
     raise FileNotFoundError(
-        f"Could not find pydcov executable. Tried: {[str(p) for p in possible_paths]}\n"
-        "Make sure to build the project first with 'make' or 'cmake --build build'"
+        f"Could not find algorithm_cli executable. Tried: {[str(p) for p in possible_paths]}\n"
+        "Make sure to build the project first with 'cmake --build build' or 'make'"
     )
 
 

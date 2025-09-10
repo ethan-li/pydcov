@@ -47,36 +47,36 @@ endif()
 include(cmake/coverage.cmake)
 
 # ==============================================================================
-# Build Targets
+# Module Configuration
+# ==============================================================================
+# This project follows a modular architecture where each module contains:
+# - src/: Core library implementation
+# - app/: Command-line interface application
+# - CMakeLists.txt: Module-specific build configuration
+#
+# Modules are designed to be:
+# - Self-contained with clear interfaces
+# - Reusable across different applications
+# - Independently testable and maintainable
+# - Following consistent naming conventions (pydcov::module_name)
 # ==============================================================================
 
-# Create the C library
-add_library(algorithm STATIC
-    src/algorithm.c
-    src/algorithm.h
-)
+# Add algorithm module (library + app)
+add_subdirectory(algorithm)
+add_subdirectory(algorithm/app)
 
-target_include_directories(algorithm PUBLIC src)
+# Add statistics module (library + app)
+add_subdirectory(statistics)
+add_subdirectory(statistics/app)
 
-# Create the main executable
-add_executable(pydcov
-    src/main.cpp
-)
-
-target_link_libraries(pydcov algorithm)
-
-# Link coverage libraries if coverage is enabled
-# This function is defined in cmake/coverage.cmake
-if(COMMAND target_link_coverage_libraries)
-    target_link_coverage_libraries(pydcov)
-endif()
+# Create an alias for the main executable to maintain backward compatibility
+add_executable(pydcov ALIAS algorithm_cli)
 
 # ==============================================================================
 # Installation Configuration
 # ==============================================================================
 
-# Install targets
-install(TARGETS pydcov DESTINATION bin)
+# Installation is handled by individual modules
 
 # ==============================================================================
 # Testing Support
@@ -97,5 +97,14 @@ message(STATUS "  CXX Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VE
 message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C Standard: C${CMAKE_C_STANDARD}")
 message(STATUS "  CXX Standard: C++${CMAKE_CXX_STANDARD}")
+
+# Module summary
+message(STATUS "Configured Modules:")
+message(STATUS "  - algorithm: Dynamic array library + CLI")
+message(STATUS "  - statistics: Statistical analysis library + CLI")
+message(STATUS "Available Executables:")
+message(STATUS "  - algorithm_cli: Dynamic array operations")
+message(STATUS "  - statistics_cli: Statistical analysis")
+message(STATUS "  - pydcov: Alias for algorithm_cli (backward compatibility)")
 
 # Coverage status is reported by the coverage module if enabled

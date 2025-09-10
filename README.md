@@ -27,7 +27,7 @@ pydcov/
 │   ├── test_utils.py       # Test utilities and helpers (156 lines)
 │   └── test_dynarray.py    # Dynamic array tests - 16 test cases (251 lines)
 ├── scripts/                # Build and coverage scripts
-│   ├── coverage.sh         # Coverage collection script (263 lines)
+│   ├── install_deps.sh     # Dependency installation script
 │   ├── install_deps.sh     # Dependency installation script (290 lines)
 │   ├── test_coverage_fix.sh # Coverage verification script (217 lines)
 │   └── verify_deployment.sh # Pre-deployment verification (271 lines)
@@ -137,23 +137,22 @@ The project implements a dynamic array data structure with a command-line interf
 
 ## Coverage Workflow
 
-### Using the Coverage Script
+### Using the Python Coverage Tools
 
-The project includes a comprehensive coverage script that handles the entire workflow:
+The project uses modern Python-based coverage tools that provide enhanced functionality and better maintainability:
 
 ```bash
 # Full coverage workflow (clean, build, test, report)
-./scripts/coverage.sh
+python3 coverage_tools/scripts/coverage.py full tests/
 
 # Individual steps
-./scripts/coverage.sh clean    # Clean coverage data
-./scripts/coverage.sh build    # Build with coverage
-./scripts/coverage.sh test     # Run tests
-./scripts/coverage.sh report   # Generate report
+python3 coverage_tools/scripts/coverage.py clean    # Clean coverage data
+python3 coverage_tools/scripts/coverage.py build    # Build with coverage
+python3 coverage_tools/scripts/coverage.py test tests/  # Run tests
+python3 coverage_tools/scripts/coverage.py report   # Generate report
 
-# Specify compiler
-./scripts/coverage.sh full gcc    # Use GCC
-./scripts/coverage.sh full clang  # Use Clang
+# Check status
+python3 coverage_tools/scripts/coverage.py status
 ```
 
 ### Manual Coverage Workflow
@@ -337,6 +336,53 @@ python3 -m pytest tests/ -n auto
 python3 -m pytest tests/ --html=report.html --self-contained-html
 ```
 
+### Coverage Analysis
+
+The project includes comprehensive C/C++ code coverage analysis:
+
+#### Standard Coverage (Single Run)
+```bash
+# Complete coverage workflow
+python3 coverage_tools/scripts/coverage.py full tests/
+
+# Step-by-step coverage
+python3 coverage_tools/scripts/coverage.py build    # Build with coverage
+python3 coverage_tools/scripts/coverage.py test tests/  # Run tests
+python3 coverage_tools/scripts/coverage.py report   # Generate report
+```
+
+#### Incremental Coverage (Multiple Runs)
+```bash
+# Step-by-step incremental coverage
+python3 coverage_tools/scripts/incremental_coverage.py init
+python3 coverage_tools/scripts/incremental_coverage.py add algorithm/tests/
+python3 coverage_tools/scripts/incremental_coverage.py add statistics/tests/
+python3 coverage_tools/scripts/incremental_coverage.py merge
+python3 coverage_tools/scripts/incremental_coverage.py report
+
+# Or complete workflow
+python3 coverage_tools/scripts/incremental_coverage.py full tests/
+```
+
+#### Module-Specific Coverage
+```bash
+# Generate reports for all modules
+python3 coverage_tools/scripts/coverage_modules.py full
+
+# Generate report for specific module
+python3 coverage_tools/scripts/coverage_modules.py generate algorithm
+```
+
+**Coverage Features:**
+- **🐍 Modern Python Tools**: Enhanced Python-based coverage scripts with better error handling and logging
+- **Cross-platform**: Linux and macOS support
+- **Multi-compiler**: GCC/gcov and Clang/llvm-cov
+- **Incremental collection**: Accumulate coverage across multiple test runs
+- **Module separation**: Individual reports for algorithm and statistics modules
+- **Multiple formats**: HTML reports and LCOV data for CI/CD integration
+
+> **📖 For detailed information about the Python coverage tools, see [coverage_tools/README.md](coverage_tools/README.md)**
+
 ## Contributing
 
 1. Fork the repository
@@ -344,7 +390,7 @@ python3 -m pytest tests/ --html=report.html --self-contained-html
 3. Make your changes
 4. Add tests for new functionality
 5. Ensure all tests pass: `python3 -m pytest tests/ -v`
-6. Check coverage: `./scripts/coverage.sh`
+6. Check coverage: `python3 coverage_tools/scripts/coverage.py full tests/`
 7. Commit your changes: `git commit -am 'Add feature'`
 8. Push to the branch: `git push origin feature-name`
 9. Create a Pull Request

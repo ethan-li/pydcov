@@ -266,7 +266,7 @@ main() {
     
     log_success "Dependency installation completed!"
     log_info "You can now build the project with: make coverage"
-    log_info "Or run the full coverage workflow with: ./scripts/coverage.sh"
+    log_info "Or run the full coverage workflow with: python3 coverage_tools/scripts/coverage.py full tests/"
 }
 
 # Show help

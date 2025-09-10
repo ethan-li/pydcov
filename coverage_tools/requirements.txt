@@ -1,0 +1,34 @@
+# Python Coverage Tools Requirements
+# 
+# This file lists the Python dependencies for the coverage tools.
+# Most dependencies are part of the Python standard library.
+#
+# Installation:
+#   pip install -r coverage_tools/requirements.txt
+#
+# Or for development with additional tools:
+#   pip install -r coverage_tools/requirements.txt pytest
+
+# Core dependencies (all part of standard library)
+# - pathlib (Python 3.4+)
+# - subprocess (built-in)
+# - logging (built-in)
+# - argparse (built-in)
+# - shutil (built-in)
+# - os (built-in)
+
+# Optional dependencies for enhanced functionality
+# These are not strictly required but recommended for development
+
+# Testing frameworks (choose one or more based on your needs)
+# pytest>=6.0.0  # Popular testing framework (default for backward compatibility)
+# unittest2      # Enhanced unittest for Python 2.7 compatibility
+# nose2          # Successor to nose testing framework
+# green          # Clean, colorful test runner
+
+# Code formatting and linting (optional)
+black>=22.0.0
+flake8>=4.0.0
+
+# Type checking (optional)
+mypy>=0.900
