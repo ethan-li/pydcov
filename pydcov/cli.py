@@ -319,10 +319,8 @@ def handle_init_template_command(args) -> int:
         # Copy template files
         try:
             # Try new importlib.resources API (Python 3.9+)
-            with importlib.resources.as_file(
-                importlib.resources.files(f'pydcov.templates.{args.template}')
-            ) as template_dir:
-                copy_template_files(template_dir, project_dir, args.project_name)
+            template_files = importlib.resources.files(f'pydcov.templates.{args.template}')
+            copy_template_files_from_traversable(template_files, project_dir, args.project_name)
 
         except (ImportError, AttributeError):
             # Fallback for older Python versions
@@ -335,13 +333,9 @@ def handle_init_template_command(args) -> int:
         cmake_dir.mkdir(exist_ok=True)
 
         try:
-            with importlib.resources.as_file(
-                importlib.resources.files('pydcov.cmake')
-            ) as package_cmake_dir:
-                for cmake_file in package_cmake_dir.glob('*.cmake'):
-                    shutil.copy2(cmake_file, cmake_dir / cmake_file.name)
-                for doc_file in package_cmake_dir.glob('*.md'):
-                    shutil.copy2(doc_file, cmake_dir / doc_file.name)
+            # Try new importlib.resources API (Python 3.9+)
+            cmake_files = importlib.resources.files('pydcov.cmake')
+            copy_cmake_files_from_traversable(cmake_files, cmake_dir)
 
         except (ImportError, AttributeError):
             import pkg_resources
@@ -365,6 +359,65 @@ def handle_init_template_command(args) -> int:
     except Exception as e:
         print(f"Error: {e}")
         return 1
+
+
+def copy_template_files_from_traversable(template_traversable, project_dir: Path, project_name: str):
+    """Copy template files from importlib.resources.Traversable and substitute placeholders."""
+    import shutil
+    from pathlib import Path
+
+    def _copy_traversable_recursive(traversable, dest_base: Path, rel_path: Path = Path()):
+        """Recursively copy files from a Traversable object."""
+        for item in traversable.iterdir():
+            item_dest = dest_base / rel_path / item.name
+
+            if item.is_dir():
+                # Create directory and recurse
+                item_dest.mkdir(parents=True, exist_ok=True)
+                _copy_traversable_recursive(item, dest_base, rel_path / item.name)
+            else:
+                # Copy file with placeholder substitution
+                item_dest.parent.mkdir(parents=True, exist_ok=True)
+
+                try:
+                    # Try to read as text and substitute placeholders
+                    content = item.read_text(encoding='utf-8')
+                    content = content.replace('{{PROJECT_NAME}}', project_name)
+                    item_dest.write_text(content, encoding='utf-8')
+                except (UnicodeDecodeError, AttributeError):
+                    # Binary file or read error, copy as-is
+                    with item.open('rb') as src, open(item_dest, 'wb') as dst:
+                        shutil.copyfileobj(src, dst)
+
+    _copy_traversable_recursive(template_traversable, project_dir)
+
+
+def copy_cmake_files_from_traversable(cmake_traversable, cmake_dir: Path):
+    """Copy CMake files from importlib.resources.Traversable."""
+    import shutil
+
+    for item in cmake_traversable.iterdir():
+        if item.is_file() and (item.name.endswith('.cmake') or item.name.endswith('.md')):
+            dest_file = cmake_dir / item.name
+            with item.open('rb') as src, open(dest_file, 'wb') as dst:
+                shutil.copyfileobj(src, dst)
+
+
+def copy_cmake_files_from_traversable_with_force(cmake_traversable, cmake_dir: Path, force: bool):
+    """Copy CMake files from importlib.resources.Traversable with force option."""
+    import shutil
+
+    for item in cmake_traversable.iterdir():
+        if item.is_file() and (item.name.endswith('.cmake') or item.name.endswith('.md')):
+            dest_file = cmake_dir / item.name
+
+            if dest_file.exists() and not force:
+                print(f"File {dest_file} already exists. Use --force to overwrite.")
+                continue
+
+            with item.open('rb') as src, open(dest_file, 'wb') as dst:
+                shutil.copyfileobj(src, dst)
+            print(f"Copied {item.name} to {dest_file}")
 
 
 def copy_template_files(template_dir: Path, project_dir: Path, project_name: str):
@@ -422,28 +475,8 @@ def handle_init_cmake_command(args) -> int:
         # Copy CMake files from package
         try:
             # Try new importlib.resources API (Python 3.9+)
-            with importlib.resources.as_file(
-                importlib.resources.files('pydcov.cmake')
-            ) as package_cmake_dir:
-                for cmake_file in package_cmake_dir.glob('*.cmake'):
-                    dest_file = cmake_dir / cmake_file.name
-
-                    if dest_file.exists() and not getattr(args, 'force', False):
-                        print(f"File {dest_file} already exists. Use --force to overwrite.")
-                        continue
-
-                    shutil.copy2(cmake_file, dest_file)
-                    print(f"Copied {cmake_file.name} to {dest_file}")
-
-                # Copy documentation files
-                for doc_file in package_cmake_dir.glob('*.md'):
-                    dest_file = cmake_dir / doc_file.name
-
-                    if dest_file.exists() and not getattr(args, 'force', False):
-                        continue
-
-                    shutil.copy2(doc_file, dest_file)
-                    print(f"Copied {doc_file.name} to {dest_file}")
+            cmake_files = importlib.resources.files('pydcov.cmake')
+            copy_cmake_files_from_traversable_with_force(cmake_files, cmake_dir, getattr(args, 'force', False))
 
         except (ImportError, AttributeError):
             # Fallback for older Python versions

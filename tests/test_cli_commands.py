@@ -302,6 +302,36 @@ class TestCLIPathHandling:
             assert project_path.exists()
             assert (project_path / 'CMakeLists.txt').exists()
 
+    def test_python310_importlib_resources_compatibility(self):
+        """Test compatibility with Python 3.10+ importlib.resources behavior."""
+        # This test specifically checks for the MultiplexedPath issue in Python 3.10
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run([
+                'pydcov', 'init-template', 'python310_test',
+                '--template', 'basic_cpp',
+                '--output-dir', temp_dir
+            ], capture_output=True, text=True)
+
+            # Should not fail with "MultiplexedPath is not a file" error
+            assert result.returncode == 0, f"Command failed: {result.stdout} {result.stderr}"
+            assert 'MultiplexedPath' not in result.stderr
+            assert 'is not a file' not in result.stderr
+
+            # Verify all template files were created correctly
+            project_path = Path(temp_dir) / 'python310_test'
+            assert project_path.exists()
+            assert (project_path / 'CMakeLists.txt').exists()
+            assert (project_path / 'src' / 'calculator.cpp').exists()
+            assert (project_path / 'src' / 'calculator.hpp').exists()
+            assert (project_path / 'tests' / 'test_calculator.cpp').exists()
+            assert (project_path / 'app' / 'main.cpp').exists()
+            assert (project_path / 'cmake' / 'coverage.cmake').exists()
+
+            # Verify placeholder substitution worked
+            cmake_content = (project_path / 'CMakeLists.txt').read_text()
+            assert 'project(python310_test)' in cmake_content
+            assert '{{PROJECT_NAME}}' not in cmake_content
+
 
 if __name__ == '__main__':
     pytest.main([__file__])

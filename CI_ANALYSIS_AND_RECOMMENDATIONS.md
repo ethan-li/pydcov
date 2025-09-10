@@ -279,6 +279,33 @@ pytest tests/ -m "integration" # Integration tests
 
 **Validation**: All template and CLI tests now pass across Python versions 3.9-3.12.
 
+### **🔧 Python 3.10 importlib.resources Compatibility (CI Issue Resolved)**
+
+**Problem**: CI failure in Python 3.10 with "MultiplexedPath is not a file" error in template system.
+
+**Root Cause**: Python 3.10's `importlib.resources.as_file()` returns `MultiplexedPath` objects for directories, which don't behave exactly like `Path` objects when used with `.rglob()` and other path operations.
+
+**Solution Implemented**:
+- Replaced `importlib.resources.as_file()` with direct `importlib.resources.files()` usage
+- Created new `copy_template_files_from_traversable()` function to handle `Traversable` objects
+- Added `copy_cmake_files_from_traversable()` and `copy_cmake_files_from_traversable_with_force()` functions
+- Maintained backward compatibility with `pkg_resources` fallback for older Python versions
+
+**Files Modified**:
+- `pydcov/cli.py`:
+  - Updated `handle_init_template_command()` to use `Traversable` objects directly
+  - Updated `handle_init_cmake_command()` to use `Traversable` objects directly
+  - Added new functions for handling `importlib.resources.Traversable` objects
+  - Maintained existing `copy_template_files()` function for `pkg_resources` fallback
+
+**Technical Details**:
+- `importlib.resources.files()` returns a `Traversable` object that works consistently across Python versions
+- New functions use `.iterdir()` and `.is_dir()` methods compatible with `Traversable` interface
+- Proper handling of binary files using `.open('rb')` method
+- Maintained all placeholder substitution functionality
+
+**Validation**: Template creation and CMake integration now work correctly in Python 3.10+ CI environments.
+
 ## Conclusion
 
 The PyDCov CI/CD pipeline has been transformed from testing only example modules to providing comprehensive validation of the entire PyDCov package ecosystem. The new test suite ensures:
