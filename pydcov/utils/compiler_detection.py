@@ -9,7 +9,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from pydcov.utils.logging_config import get_logger
 
@@ -56,7 +56,7 @@ class CompilerDetector:
         self.logger.info(f"Detected compiler: {compiler}")
         return compiler
     
-    def find_coverage_tools(self, compiler: Optional[str] = None) -> Dict[str, Optional[str]]:
+    def find_coverage_tools(self, compiler: str | None = None) -> Dict[str, str | None]:
         """
         Find coverage tools for the specified compiler.
         
@@ -83,7 +83,7 @@ class CompilerDetector:
         self._cache[cache_key] = tools
         return tools
     
-    def _find_clang_tools(self) -> Dict[str, Optional[str]]:
+    def _find_clang_tools(self) -> Dict[str, str | None]:
         """Find Clang coverage tools."""
         tools = {}
         
@@ -95,7 +95,7 @@ class CompilerDetector:
         
         return tools
     
-    def _find_gcc_tools(self) -> Dict[str, Optional[str]]:
+    def _find_gcc_tools(self) -> Dict[str, str | None]:
         """Find GCC coverage tools."""
         tools = {}
         
@@ -110,7 +110,7 @@ class CompilerDetector:
         
         return tools
     
-    def _find_llvm_tool(self, tool_name: str) -> Optional[str]:
+    def _find_llvm_tool(self, tool_name: str) -> str | None:
         """
         Find an LLVM tool, checking common installation paths.
         
@@ -149,7 +149,7 @@ class CompilerDetector:
         
         return None
     
-    def get_coverage_flags(self, compiler: Optional[str] = None) -> List[str]:
+    def get_coverage_flags(self, compiler: str | None = None) -> List[str]:
         """
         Get compiler flags for coverage instrumentation.
         
@@ -167,7 +167,7 @@ class CompilerDetector:
         else:  # gcc
             return ['--coverage', '-fprofile-arcs', '-ftest-coverage']
     
-    def validate_tools(self, compiler: Optional[str] = None) -> Tuple[bool, List[str]]:
+    def validate_tools(self, compiler: str | None = None) -> Tuple[bool, List[str]]:
         """
         Validate that all required coverage tools are available.
         

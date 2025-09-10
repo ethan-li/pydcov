@@ -8,7 +8,7 @@ comprehensive coverage workflow including build, test, and report generation.
 import os
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List
 
 from pydcov.utils.compiler_detection import CompilerDetector
 from pydcov.utils.logging_config import get_logger
@@ -20,7 +20,7 @@ from pydcov.utils.test_executor import TestExecutor
 class CoverageManager:
     """Manages standard coverage collection and reporting workflows."""
     
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         self.logger = get_logger()
         self.path_manager = PathManager(project_root)
         self.cmake_helper = CMakeHelper(self.path_manager)
@@ -99,7 +99,7 @@ class CoverageManager:
         self.logger.success("Project built successfully with coverage instrumentation")
         return True
     
-    def test(self, test_command: Union[str, List[str]]) -> bool:
+    def test(self, test_command: str | List[str]) -> bool:
         """
         Run tests with coverage data collection.
 
@@ -163,7 +163,7 @@ class CoverageManager:
         
         return True
     
-    def full_workflow(self, test_command: Union[str, List[str]]) -> bool:
+    def full_workflow(self, test_command: str | List[str]) -> bool:
         """
         Run the complete coverage workflow: clean, build, test, report.
 

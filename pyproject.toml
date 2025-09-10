@@ -22,17 +22,15 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: C",
     "Programming Language :: C++",
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Quality Assurance",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     # All dependencies are standard library
 ]
@@ -63,10 +61,10 @@ pydcov = ["cmake/*.cmake", "cmake/*.md", "templates/**/*"]
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py311']
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

@@ -10,7 +10,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List
 
 from pydcov.utils.compiler_detection import CompilerDetector
 from pydcov.utils.logging_config import get_logger
@@ -22,7 +22,7 @@ from pydcov.utils.test_executor import TestExecutor
 class IncrementalCoverageManager:
     """Manages incremental coverage collection and reporting workflows."""
     
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         self.logger = get_logger()
         self.path_manager = PathManager(project_root)
         self.cmake_helper = CMakeHelper(self.path_manager)
@@ -66,7 +66,7 @@ class IncrementalCoverageManager:
         self.logger.success("Incremental coverage initialized")
         return True
     
-    def add(self, test_command: Union[str, List[str]]) -> bool:
+    def add(self, test_command: str | List[str]) -> bool:
         """
         Run tests and add coverage data to incremental collection.
 
@@ -400,7 +400,7 @@ class IncrementalCoverageManager:
 
         return status
 
-    def full_workflow(self, test_command: Union[str, List[str]]) -> bool:
+    def full_workflow(self, test_command: str | List[str]) -> bool:
         """
         Run complete incremental coverage workflow: init, add, merge, report.
 

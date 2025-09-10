@@ -9,7 +9,7 @@ including pytest, unittest, custom executables, and shell commands.
 
 import subprocess
 import shlex
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Dict, Any
 from pathlib import Path
 
 from pydcov.utils.logging_config import setup_logging
@@ -23,7 +23,7 @@ class TestExecutor:
     and custom test commands while maintaining consistent coverage data collection.
     """
     
-    def __init__(self, project_root: Union[str, Path], logger=None):
+    def __init__(self, project_root: str | Path, logger=None):
         """
         Initialize the test executor.
         
@@ -36,10 +36,10 @@ class TestExecutor:
     
     def execute_test_command(
         self,
-        test_command: Union[str, List[str]],
-        env: Optional[Dict[str, str]] = None,
+        test_command: str | List[str],
+        env: Dict[str, str] | None = None,
         timeout: int = 600,
-        cwd: Optional[Union[str, Path]] = None
+        cwd: str | Path | None = None
     ) -> bool:
         """
         Execute a generic test command with coverage data collection.
@@ -108,7 +108,7 @@ class TestExecutor:
             return False
     
     @staticmethod
-    def parse_test_command(command_args: List[str]) -> Union[str, List[str]]:
+    def parse_test_command(command_args: List[str]) -> str | List[str]:
         """
         Parse test command arguments into a proper command.
 
@@ -166,7 +166,7 @@ class TestExecutor:
             'custom': []  # User-defined command
         }
     
-    def validate_test_command(self, test_command: Union[str, List[str]]) -> bool:
+    def validate_test_command(self, test_command: str | List[str]) -> bool:
         """
         Validate that a test command is executable.
         

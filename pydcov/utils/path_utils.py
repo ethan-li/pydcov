@@ -6,7 +6,7 @@ Provides centralized path management and validation for the coverage system.
 
 import os
 from pathlib import Path
-from typing import Optional
+# No typing imports needed for Python 3.11+ union syntax
 
 from .logging_config import get_logger
 
@@ -14,7 +14,7 @@ from .logging_config import get_logger
 class PathManager:
     """Manages paths and directories for the coverage system."""
     
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Path | None = None):
         self.logger = get_logger()
         
         if project_root is None:
@@ -97,7 +97,7 @@ class PathManager:
             self.logger.error(f"Failed to read CMakeCache.txt: {e}")
             return False
     
-    def get_source_files(self, module: Optional[str] = None) -> list:
+    def get_source_files(self, module: str | None = None) -> list:
         """
         Get list of source files for coverage analysis.
         
@@ -120,7 +120,7 @@ class PathManager:
         
         return [str(f) for f in source_files]
     
-    def get_executable_path(self, module: str) -> Optional[Path]:
+    def get_executable_path(self, module: str) -> Path | None:
         """
         Get path to module executable.
         

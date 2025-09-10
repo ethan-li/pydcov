@@ -154,8 +154,15 @@ brew install llvm
 
 ### Python Requirements
 
-- Python 3.8+
+- **Python 3.11+** (leverages modern Python features for improved performance and reliability)
 - No additional Python dependencies (uses standard library)
+
+**Why Python 3.11+?**
+- **Enhanced Performance**: Python 3.11 provides significant performance improvements (10-60% faster)
+- **Better Error Messages**: More detailed and helpful error messages for debugging
+- **Modern Type Hints**: Support for new union syntax (`str | None` instead of `Optional[str]`)
+- **Improved Standard Library**: Enhanced `importlib.resources` and other stdlib improvements
+- **Better Security**: Latest security patches and improvements
 
 ## 🏗️ CMake Integration
 

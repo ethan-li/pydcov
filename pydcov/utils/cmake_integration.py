@@ -7,7 +7,7 @@ existing CMake-based coverage system.
 
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from pydcov.utils.logging_config import get_logger
 from pydcov.utils.path_utils import PathManager
@@ -20,7 +20,7 @@ class CMakeHelper:
         self.path_manager = path_manager
         self.logger = get_logger()
     
-    def run_target(self, target: str, cwd: Optional[Path] = None) -> bool:
+    def run_target(self, target: str, cwd: Path | None = None) -> bool:
         """
         Run a CMake target using make.
         
@@ -96,7 +96,7 @@ class CMakeHelper:
         """Run incremental coverage report target."""
         return self.run_target('coverage-incremental-report')
     
-    def configure_project(self, options: Optional[List[str]] = None) -> bool:
+    def configure_project(self, options: List[str] | None = None) -> bool:
         """
         Configure the project with CMake.
         

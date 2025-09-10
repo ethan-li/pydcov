@@ -38,7 +38,7 @@ Examples:
 import argparse
 import sys
 from pathlib import Path
-from typing import Optional
+# No typing imports needed for Python 3.11+ union syntax
 
 from pydcov import __version__
 from pydcov.core.coverage_manager import CoverageManager

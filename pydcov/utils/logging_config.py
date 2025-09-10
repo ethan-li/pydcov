@@ -7,7 +7,7 @@ to provide clear, color-coded output for better user experience.
 
 import logging
 import sys
-from typing import Optional
+# No typing imports needed for Python 3.11+ union syntax
 
 
 class ColoredFormatter(logging.Formatter):
@@ -81,7 +81,7 @@ def setup_logging(level: str = "INFO", use_colors: bool = True) -> logging.Logge
     return logger
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str | None = None) -> logging.Logger:
     """
     Get a logger instance.
     

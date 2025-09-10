@@ -66,7 +66,7 @@ Created four new test modules covering all essential PyDCov functionality:
 ### 2. Enhanced CI Workflow
 
 #### **New Package Testing Job**
-Added `package-test` job with Python 3.9-3.12 matrix:
+Added `package-test` job with Python 3.11-3.13 matrix:
 ```yaml
 - Build wheel packages
 - Test installation from wheel
@@ -187,7 +187,7 @@ pytest tests/ -m "integration" # Integration tests
 
 ### **Multi-Stage Testing**
 
-1. **Package Test Stage** (Python 3.9-3.12)
+1. **Package Test Stage** (Python 3.11-3.13)
    - Build and test wheel distribution
    - Validate cross-version compatibility
    - Test installation and basic functionality
@@ -255,7 +255,7 @@ pytest tests/ -m "integration" # Integration tests
 - **4 new test modules**: 40+ test functions
 - **3 test categories**: Package, CLI, Template, Integration
 - **3 CI jobs**: Package testing, functionality testing, artifact packaging
-- **4 Python versions**: 3.9, 3.10, 3.11, 3.12
+- **3 Python versions**: 3.11, 3.12, 3.13
 - **3 platforms**: Ubuntu+GCC, Ubuntu+Clang, macOS+Clang
 
 ## Recent Fixes
@@ -277,7 +277,7 @@ pytest tests/ -m "integration" # Integration tests
 - `tests/test_template_system.py`: Fixed error message checking in tests
 - `tests/test_cli_commands.py`: Added `TestCLIPathHandling` class with comprehensive path tests
 
-**Validation**: All template and CLI tests now pass across Python versions 3.9-3.12.
+**Validation**: All template and CLI tests now pass across Python versions 3.11-3.13.
 
 ### **🔧 Python 3.10 importlib.resources Compatibility (CI Issue Resolved)**
 
