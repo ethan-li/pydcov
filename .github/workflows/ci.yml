@@ -107,7 +107,7 @@ jobs:
     - name: Run integration tests
       run: |
         # Test integration scenarios (marked as slow)
-        python -m pytest tests/test_integration.py -v --tb=short -m "not slow"
+        python -m pytest tests/test_integration.py -v --tb=short --run-slow
 
     - name: Run example module tests
       run: |

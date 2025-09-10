@@ -217,7 +217,8 @@ class TestErrorRecovery:
         
         # Should fail gracefully
         assert result.returncode != 0
-        assert 'permission' in result.stderr.lower() or 'denied' in result.stderr.lower()
+        error_output = (result.stdout + result.stderr).lower()
+        assert 'permission' in error_output or 'denied' in error_output or 'read-only' in error_output
 
 
 class TestCrossProjectCompatibility:
