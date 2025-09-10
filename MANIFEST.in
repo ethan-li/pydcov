@@ -1,0 +1,27 @@
+# Include package metadata
+include README_PACKAGE.md
+include LICENSE
+include pyproject.toml
+
+# Include CMake integration files
+recursive-include pydcov/cmake *.cmake *.md
+
+# Include project templates
+recursive-include pydcov/templates *
+# Exclude Python cache files
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+
+# Exclude development and example files
+exclude README.md
+exclude EXAMPLES.md
+exclude CMAKE_TECHNICAL_DOCUMENTATION.md
+exclude PACKAGE_README.md
+recursive-exclude examples *
+recursive-exclude tests *
+recursive-exclude coverage_tools *
+recursive-exclude build *
+recursive-exclude .git *
+recursive-exclude __pycache__ *
+recursive-exclude *.egg-info *

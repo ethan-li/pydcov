@@ -1,484 +1,440 @@
-# PyDCov - C Code Coverage for Python-Driven Tests
+# PyDCov - Python-based C/C++ Code Coverage Tools
 
-[![CI](https://github.com/your-username/pydcov/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/pydcov/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/your-username/pydcov/branch/main/graph/badge.svg)](https://codecov.io/gh/your-username/pydcov)
+[![PyPI version](https://badge.fury.io/py/pydcov.svg)](https://badge.fury.io/py/pydcov)
+[![Python Support](https://img.shields.io/pypi/pyversions/pydcov.svg)](https://pypi.org/project/pydcov/)
+[![CI](https://github.com/ethan-li/pydcov/actions/workflows/ci.yml/badge.svg)](https://github.com/ethan-li/pydcov/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A focused sample project demonstrating how to measure code coverage for C code that is executed via command-line interface from Python tests. This project provides a comprehensive solution for cross-platform C code coverage collection, reporting, and CI integration, using a dynamic array data structure as the example C algorithm.
+A comprehensive coverage management system for CMake-based C/C++ projects. PyDCov provides modern Python tools for coverage collection, incremental coverage tracking, and reporting with support for both GCC/gcov and Clang/llvm-cov toolchains.
 
-## Features
-
-- **Cross-Platform Support**: Works on both Linux and macOS
-- **Multiple Compiler Support**: GCC (gcov) and Clang (llvm-cov)
-- **Comprehensive Test Suite**: Python-driven tests using pytest
-- **Coverage Reporting**: HTML, XML, and LCOV format reports
-- **CI/CD Integration**: Complete GitHub Actions workflow
-- **Dynamic Array Implementation**: C90-compliant dynamic array data structure with memory management
-
-## Project Structure
-
-```
-pydcov/
-├── coverage_tools/         # Main Python coverage tools package (DELIVERABLE)
-│   ├── core/              # Core coverage management utilities
-│   ├── scripts/           # Command-line coverage tools
-│   ├── utils/             # Utility modules and helpers
-│   └── requirements.txt   # Python dependencies for coverage tools
-├── cmake/                  # CMake coverage utilities (DELIVERABLE)
-│   ├── coverage.cmake     # Coverage configuration module
-│   └── COVERAGE_USAGE.md  # CMake integration documentation
-├── docs/                   # Documentation (DELIVERABLE)
-│   ├── INCREMENTAL_COVERAGE.md
-│   └── MODULE_COVERAGE.md
-├── scripts/                # Build and deployment scripts (DELIVERABLE)
-│   ├── install_deps.sh     # Dependency installation script
-│   ├── test_coverage_fix.sh # Coverage verification script
-│   └── verify_deployment.sh # Pre-deployment verification
-├── examples/               # Example C library modules
-│   ├── algorithm/         # Dynamic array example module
-│   │   ├── src/           # Algorithm library source code
-│   │   ├── app/           # Algorithm CLI application
-│   │   ├── tests/         # Algorithm module tests
-│   │   └── CMakeLists.txt # Module build configuration
-│   └── statistics/        # Statistical analysis example module
-│       ├── src/           # Statistics library source code
-│       ├── app/           # Statistics CLI application
-│       ├── tests/         # Statistics module tests
-│       └── CMakeLists.txt # Module build configuration
-├── tests/                  # Root test configuration (if needed)
-│   └── conftest.py        # Root pytest configuration
-├── .github/workflows/      # CI/CD configuration
-│   └── ci.yml              # GitHub Actions workflow with artifact packaging
-├── CMakeLists.txt          # Root CMake build configuration
-├── requirements.txt        # Python dependencies
-├── pytest.ini             # Pytest configuration
-├── EXAMPLES.md             # Detailed usage examples
-├── PACKAGE_README.md       # Package distribution documentation
-└── LICENSE                 # MIT license
-```
-
-### Deliverable vs Example Components
-
-**Deliverable Components** (packaged in CI artifacts):
-- `coverage_tools/` - The core Python coverage tools
-- `cmake/` - CMake integration utilities
-- `docs/` - Documentation
-- `scripts/` - Build and deployment scripts
-- Root configuration files
-
-**Example/Demo Components** (for testing and demonstration):
-- `examples/algorithm/` and `examples/statistics/` - Example C library modules with co-located tests
-- `tests/` - Root test configuration
-
-## Quick Start
-
-### Prerequisites
-
-- **C Compiler**: GCC or Clang
-- **Python 3.7+**: For running tests
-- **CMake 3.15+**: For building the project
+## 🚀 Quick Start
 
 ### Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/your-username/pydcov.git
-   cd pydcov
-   ```
-
-2. **Install dependencies** (optional - uses automated script):
-   ```bash
-   ./scripts/install_deps.sh
-   ```
-
-3. **Or install manually**:
-
-   **On Ubuntu/Debian**:
-   ```bash
-   sudo apt-get update
-   sudo apt-get install build-essential gcc g++ clang llvm cmake lcov python3 python3-pip
-   pip3 install pytest pytest-cov pytest-xdist pytest-html coverage
-   ```
-
-   **On macOS**:
-   ```bash
-   brew install llvm lcov cmake
-   pip3 install pytest pytest-cov pytest-xdist pytest-html coverage
-   ```
-
-### Building and Testing
-
-1. **Build the project**:
-   ```bash
-   mkdir -p build && cd build
-   cmake .. -DCMAKE_BUILD_TYPE=Release
-   make
-   cd ..
-   ```
-
-2. **Run tests**:
-   ```bash
-   python3 -m pytest tests/ -v
-   ```
-
-3. **Generate coverage report**:
-   ```bash
-   # Clean and build with coverage
-   rm -rf build && mkdir -p build && cd build
-   cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
-   make
-   cd ..
-
-   # Run tests with coverage
-   export LLVM_PROFILE_FILE="build/coverage-%p.profraw"  # For Clang
-   python3 -m pytest tests/ -v
-
-   # Generate coverage report
-   cd build && make coverage-report
-   ```
-
-4. **View coverage report**:
-   ```bash
-   open build/coverage/html/index.html  # macOS
-   xdg-open build/coverage/html/index.html  # Linux
-   ```
-
-## Usage Examples
-
-The project implements a dynamic array data structure with a command-line interface:
-
 ```bash
-# Dynamic array operations
-./build/pydcov dynarray create 10      # Create array with capacity 10
-./build/pydcov dynarray push 1 2 3     # Push values to array
-./build/pydcov dynarray get 0          # Get value at index 0
-./build/pydcov dynarray pop 2          # Pop 2 values from array
-./build/pydcov dynarray cleanup        # Clean up array data
-
-# Example workflow
-./build/pydcov dynarray create 5       # Create array with capacity 5
-./build/pydcov dynarray push 10 20 30  # Push three values
-./build/pydcov dynarray get 1          # Returns: 20
-./build/pydcov dynarray pop            # Returns: 30 (LIFO order)
-./build/pydcov dynarray push 40 50 60  # Push more values (triggers expansion)
-./build/pydcov dynarray pop 2          # Returns: 60 50
+pip install pydcov
 ```
 
-## Coverage Workflow
-
-### Using the Python Coverage Tools
-
-The project uses modern Python-based coverage tools that provide enhanced functionality and better maintainability:
+### Create a New Project
 
 ```bash
-# Full coverage workflow (clean, build, test, report)
-python3 coverage_tools/scripts/coverage.py full tests/
+# Create a new C++ project with coverage support
+pydcov init-template my_project
 
-# Individual steps
-python3 coverage_tools/scripts/coverage.py clean    # Clean coverage data
-python3 coverage_tools/scripts/coverage.py build    # Build with coverage
-python3 coverage_tools/scripts/coverage.py test tests/  # Run tests
-python3 coverage_tools/scripts/coverage.py report   # Generate report
+# Navigate to project and build
+cd my_project
+mkdir build && cd build
+cmake ..
+make
+
+# Run coverage analysis
+pydcov coverage full "make test"
+```
+
+### Add to Existing Project
+
+```bash
+# Add PyDCov to existing CMake project
+pydcov init-cmake
+
+# Add to your CMakeLists.txt:
+# include(cmake/coverage.cmake)
+
+# Run coverage
+pydcov coverage full "python -m pytest tests/"
+```
+
+## ✨ Features
+
+- **🔧 Easy Installation**: Simple `pip install pydcov`
+- **🏗️ Project Templates**: Bootstrap new projects with `init-template`
+- **🔄 Cross-Platform**: Linux, macOS, Windows support
+- **⚙️ Multiple Compilers**: GCC/gcov and Clang/llvm-cov
+- **📊 Incremental Coverage**: Track coverage changes over time
+- **🧪 Framework-Agnostic**: Works with any testing framework
+- **🎯 CMake Integration**: Seamless CMake build system support
+- **📈 Rich Reporting**: HTML, XML, and LCOV format reports
+
+## 📋 Command Reference
+
+### Coverage Commands
+
+```bash
+pydcov coverage clean          # Clean coverage data
+pydcov coverage build          # Build with coverage instrumentation
+pydcov coverage test "cmd"     # Run tests with coverage collection
+pydcov coverage report         # Generate coverage reports
+pydcov coverage full "cmd"     # Complete workflow: clean, build, test, report
+pydcov coverage status         # Show coverage status
+```
+
+### Incremental Coverage Commands
+
+```bash
+pydcov incremental init        # Initialize incremental tracking
+pydcov incremental add "cmd"   # Add coverage data from test run
+pydcov incremental merge       # Merge coverage data
+pydcov incremental report      # Generate incremental report
+pydcov incremental status      # Show incremental status
+pydcov incremental clean       # Clean incremental data
+```
+
+### Project Setup Commands
+
+```bash
+pydcov init-cmake              # Copy CMake integration files
+pydcov init-template name      # Create new project from template
+pydcov --version               # Show version
+pydcov --help                  # Show help
+```
+
+## 🏗️ Project Templates
+
+PyDCov includes project templates to quickly bootstrap new C/C++ projects:
+
+### Basic C++ Template
+
+```bash
+pydcov init-template my_project --template basic_cpp
+```
+
+Creates a complete C++ project with:
+- ✅ CMake configuration with coverage support
+- ✅ Example library with calculator functions
+- ✅ Unit tests with assertions
+- ✅ Application executable
+- ✅ Complete documentation
+## 💻 Python API
+
+PyDCov can also be used programmatically:
+
+```python
+from pydcov import CoverageManager, IncrementalCoverageManager
+
+# Standard coverage workflow
+manager = CoverageManager()
+success = manager.full_workflow(["python", "-m", "pytest", "tests/"])
+
+# Incremental coverage
+incremental = IncrementalCoverageManager()
+incremental.init()
+incremental.add(["python", "-m", "pytest", "tests/module1/"])
+incremental.add(["python", "-m", "pytest", "tests/module2/"])
+incremental.report()
+```
+
+## 🔧 System Requirements
+
+### Required Tools
+
+**Build Tools:**
+- CMake 3.10 or later
+- Make or Ninja
+- GCC or Clang compiler
+
+**Coverage Tools (choose one):**
+
+For GCC:
+```bash
+# Ubuntu/Debian
+sudo apt-get install gcc gcov lcov
+
+# macOS
+brew install gcc lcov
+```
+
+For Clang:
+```bash
+# Ubuntu/Debian
+sudo apt-get install clang llvm
+
+# macOS
+brew install llvm
+```
+
+### Python Requirements
+
+- Python 3.8+
+- No additional Python dependencies (uses standard library)
+
+## 🏗️ CMake Integration
+
+PyDCov provides a comprehensive CMake module that automatically:
+
+- ✅ Detects available compilers and coverage tools
+- ✅ Configures appropriate coverage flags
+- ✅ Creates coverage targets (`coverage-clean`, `coverage-report`)
+- ✅ Supports both GCC/gcov and Clang/llvm-cov workflows
+- ✅ Provides incremental coverage capabilities
+
+### Example CMakeLists.txt
+
+```cmake
+cmake_minimum_required(VERSION 3.10)
+project(MyProject)
+
+# Include PyDCov coverage support
+include(cmake/coverage.cmake)
+
+# Your project configuration
+add_executable(my_app src/main.cpp)
+add_library(my_lib src/library.cpp)
+
+# Coverage will be automatically configured
+```
+
+## 📊 Examples and Use Cases
+
+### Basic C++ Project Example
+
+```bash
+# Create a new project
+pydcov init-template calculator_app
+
+# Build and test
+cd calculator_app
+mkdir build && cd build
+cmake ..
+make
+
+# Run coverage analysis
+pydcov coverage full "make test"
+
+# View results
+open coverage_html/index.html
+```
+
+### Integration with Existing Projects
+
+```bash
+# Add PyDCov to existing project
+cd my_existing_project
+pydcov init-cmake
+
+# Update CMakeLists.txt to include:
+# include(cmake/coverage.cmake)
+
+# Run coverage on your existing tests
+pydcov coverage full "python -m pytest tests/"
+```
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions example
+name: Coverage
+on: [push, pull_request]
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install PyDCov
+        run: pip install pydcov
+      - name: Setup project
+        run: pydcov init-cmake
+      - name: Run coverage
+        run: pydcov coverage full "python -m pytest tests/"
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+```
+
+## 🔍 Advanced Features
+
+### Incremental Coverage Tracking
+
+Track coverage changes across multiple test runs:
+
+```bash
+# Initialize incremental tracking
+pydcov incremental init
+
+# Add coverage from different test suites
+pydcov incremental add "python -m pytest tests/unit/"
+pydcov incremental add "python -m pytest tests/integration/"
+pydcov incremental add "python -m pytest tests/e2e/"
+
+# Generate combined report
+pydcov incremental report
 
 # Check status
-python3 coverage_tools/scripts/coverage.py status
+pydcov incremental status
 ```
 
-### Manual Coverage Workflow
+### Custom Test Commands
 
-1. **Clean and build with coverage**:
-   ```bash
-   rm -rf build
-   mkdir -p build
-   cd build
-   cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
-   make
-   cd ..
-   ```
-
-2. **Run tests with coverage**:
-   ```bash
-   # For Clang
-   export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
-   python3 -m pytest tests/ -v
-
-   # For GCC (no special environment needed)
-   python3 -m pytest tests/ -v
-   ```
-
-3. **Generate coverage report**:
-   ```bash
-   cd build
-   make coverage-report
-   ```
-
-### Coverage Output
-
-The coverage report includes:
-- **HTML Report**: Interactive coverage visualization
-- **LCOV Report**: Standard format for CI integration
-- **Console Summary**: Quick coverage statistics
-
-Example coverage output:
-```
-Filename                      Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
-algorithm.c                       214                18    91.59%          16                 0   100.00%         162                 3    98.15%
-main.cpp                          220                20    90.91%          10                 1    90.00%         356                72    79.78%
-TOTAL                             434                38    91.24%          26                 1    96.15%         518                75    85.52%
-```
-
-## CI/CD Pipeline
-
-### GitHub Actions Workflow
-
-The project includes a robust CI/CD pipeline with a **3-job matrix** that ensures cross-platform compatibility:
-
-#### **Test Matrix**
-```yaml
-matrix:
-  os: [ubuntu-latest, macos-latest]
-  compiler: [gcc, clang]
-  exclude:
-    - os: macos-latest
-      compiler: gcc  # macOS uses Clang by default
-```
-
-**Resulting Jobs:**
-- ✅ **ubuntu-latest + gcc**: Linux with GCC and gcov coverage
-- ✅ **ubuntu-latest + clang**: Linux with Clang and llvm-cov coverage
-- ✅ **macos-latest + clang**: macOS with Clang and llvm-cov coverage
-
-#### **Pipeline Features**
-- **Cross-platform testing**: Ensures compatibility on both Linux and macOS
-- **Multi-compiler support**: Tests with both GCC and Clang compilers
-- **Automated dependency installation**: Platform-specific package installation
-- **Coverage generation**: Comprehensive coverage reports for each combination
-- **Artifact upload**: Coverage reports and build artifacts
-- **Codecov integration**: Automatic coverage reporting and badges
-- **Error handling**: Robust error handling for coverage tool detection
-
-#### **Recent CI Improvements**
-The pipeline includes recent fixes for common CI issues:
-- **Linux GCC lcov errors**: Fixed "exclude pattern unused" errors with proper ignore flags
-- **Ubuntu Clang LLVM tools**: Automatic detection of versioned LLVM tools (llvm-profdata-14, etc.)
-- **Coverage tool detection**: Robust fallback mechanisms for different tool versions
-- **Enhanced error handling**: Comprehensive error tolerance for coverage generation
-
-### Setting Up CI
-
-1. **Enable GitHub Actions** in your repository settings
-
-2. **Add Codecov integration** (optional):
-   - Sign up at [codecov.io](https://codecov.io)
-   - Connect your GitHub repository
-   - Public repositories work automatically
-
-3. **Monitor CI runs**:
-   - Check the **Actions** tab in your GitHub repository
-   - All 3 jobs should complete successfully
-   - Coverage reports are uploaded as artifacts
-   - Add your repository
-   - No additional secrets needed for public repositories
-
-3. **Enable GitHub Pages** (optional):
-   - Go to repository Settings → Pages
-   - Set source to "GitHub Actions"
-   - Coverage reports will be available at `https://your-username.github.io/pydcov/coverage/`
-
-### Customizing CI
-
-The workflow can be customized by modifying `.github/workflows/ci.yml`:
-
-- **Add more platforms**: Add entries to the `matrix.os` array
-- **Add more compilers**: Add entries to the `matrix.compiler` array
-- **Change Python version**: Modify the `python-version` in setup steps
-- **Add deployment targets**: Add steps for deploying to other services
-
-## Build System
-
-The project uses **CMake** as its build system, providing cross-platform compatibility and modern C++ project standards.
-
-### CMake Configuration
-
-**Key Features:**
-- **C90 compliance** for algorithm implementation
-- **C++11 standard** for CLI wrapper
-- **Coverage support** with `ENABLE_COVERAGE` option
-- **Cross-platform** compatibility (Linux, macOS, Windows)
-- **Automatic tool detection** for GCC/gcov and Clang/llvm-cov
-
-### Build Commands
+PyDCov works with any test framework or executable:
 
 ```bash
-# Basic build
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+# With pytest
+pydcov coverage full "python -m pytest tests/"
+
+# With CTest
+pydcov coverage full "make test"
+
+# With custom test executable
+pydcov coverage full "./my_test_runner --verbose"
+
+# With shell scripts
+pydcov coverage full "bash run_all_tests.sh"
+```
+
+### Multiple Output Formats
+
+```bash
+# Generate coverage report (creates multiple formats)
+pydcov coverage report
+
+# Output includes:
+# - coverage_html/index.html    (Interactive HTML)
+# - coverage.xml                (XML for CI tools)
+# - coverage.lcov               (LCOV format)
+# - coverage.json               (JSON format)
+```
+
+## 🛠️ Development and Examples
+
+This repository includes example C/C++ modules that demonstrate PyDCov usage:
+
+### Example Modules
+
+- **`examples/algorithm/`**: Dynamic array implementation with comprehensive tests
+- **`examples/statistics/`**: Statistical analysis functions with unit tests
+
+### Running Examples
+
+```bash
+# Build examples
+mkdir build && cd build
+cmake ..
 make
 
-# Coverage build
-mkdir -p build && cd build
-cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
-make
+# Test algorithm module
+python -m pytest examples/algorithm/tests/ -v
 
-# Generate coverage report
-cd build && make coverage-report
+# Test statistics module
+python -m pytest examples/statistics/tests/ -v
 
-# Clean build
-rm -rf build
-
-# Install (optional)
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make install
+# Generate coverage for examples
+pydcov coverage full "python -m pytest examples/"
 ```
 
-## Testing
+### Project Structure
 
-### Test Suite Overview
+```
+pydcov/
+├── pydcov/                 # PyPI package source
+│   ├── core/              # Coverage managers
+│   ├── utils/             # Utilities and helpers
+│   ├── cmake/             # CMake integration files
+│   ├── templates/         # Project templates
+│   └── cli.py             # Command-line interface
+├── examples/              # Example C/C++ projects
+│   ├── algorithm/         # Dynamic array example
+│   └── statistics/        # Statistics example
+├── cmake/                 # CMake utilities (for examples)
+├── docs/                  # Documentation
+├── tests/                 # Package tests
+└── pyproject.toml         # Package configuration
+```
 
-The project includes a comprehensive test suite with **16 test cases** covering all dynamic array functionality:
+## 🤝 Contributing
 
-- **test_dynarray.py**: 16 comprehensive dynamic array tests (251 lines)
-  - Basic operations (create, push, pop, get)
-  - Error handling and edge cases
-  - Memory management and expansion
-  - File persistence and cleanup
-- **test_utils.py**: Test utilities and command execution helpers (156 lines)
-- **conftest.py**: pytest configuration and fixtures (135 lines)
+We welcome contributions to PyDCov! Here's how to get started:
 
-### Running Tests
+### Development Setup
 
 ```bash
-# Run all tests
-python3 -m pytest tests/ -v
+# Clone the repository
+git clone https://github.com/ethan-li/pydcov.git
+cd pydcov
 
-# Run tests for specific modules
-python3 -m pytest examples/algorithm/tests/ -v    # Algorithm module tests
-python3 -m pytest examples/statistics/tests/ -v   # Statistics module tests
+# Install in development mode
+pip install -e .
 
-# Run tests with specific markers
-python3 -m pytest examples/ -m "algorithm" -v
-python3 -m pytest examples/ -m "statistics" -v
-python3 -m pytest examples/ -m "not slow" -v
+# Run tests
+python -m pytest tests/ -v
 
-# Run with coverage (Python-level)
-python3 -m pytest examples/ --cov=coverage_tools --cov-report=html
-
-# Run in parallel
-python3 -m pytest examples/ -n auto
-
-# Generate HTML test report
-python3 -m pytest examples/ --html=report.html --self-contained-html
+# Test with examples
+pydcov coverage full "python -m pytest examples/"
 ```
 
-### Coverage Analysis
+### Contributing Guidelines
 
-The project includes comprehensive C/C++ code coverage analysis:
+1. **Fork the repository** and create a feature branch
+2. **Add tests** for new functionality
+3. **Update documentation** as needed
+4. **Ensure all tests pass**: `python -m pytest tests/ -v`
+5. **Test with examples**: `pydcov coverage full "python -m pytest examples/"`
+6. **Submit a pull request** with a clear description
 
-#### Standard Coverage (Single Run)
-```bash
-# Complete coverage workflow
-python3 coverage_tools/scripts/coverage.py full tests/
+### Reporting Issues
 
-# Step-by-step coverage
-python3 coverage_tools/scripts/coverage.py build    # Build with coverage
-python3 coverage_tools/scripts/coverage.py test tests/  # Run tests
-python3 coverage_tools/scripts/coverage.py report   # Generate report
-```
+- **Bug reports**: Include system info, PyDCov version, and reproduction steps
+- **Feature requests**: Describe the use case and expected behavior
+- **Questions**: Check existing issues and documentation first
 
-#### Incremental Coverage (Multiple Runs)
-```bash
-# Step-by-step incremental coverage
-python3 coverage_tools/scripts/incremental_coverage.py init
-python3 coverage_tools/scripts/incremental_coverage.py add algorithm/tests/
-python3 coverage_tools/scripts/incremental_coverage.py add statistics/tests/
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
-
-# Or complete workflow
-python3 coverage_tools/scripts/incremental_coverage.py full tests/
-```
-
-#### Module-Specific Coverage
-```bash
-# Generate reports for all modules
-python3 coverage_tools/scripts/coverage_modules.py full
-
-# Generate report for specific module
-python3 coverage_tools/scripts/coverage_modules.py generate algorithm
-```
-
-**Coverage Features:**
-- **🐍 Modern Python Tools**: Enhanced Python-based coverage scripts with better error handling and logging
-- **Cross-platform**: Linux and macOS support
-- **Multi-compiler**: GCC/gcov and Clang/llvm-cov
-- **Incremental collection**: Accumulate coverage across multiple test runs
-- **Module separation**: Individual reports for algorithm and statistics modules
-- **Multiple formats**: HTML reports and LCOV data for CI/CD integration
-
-> **📖 For detailed information about the Python coverage tools, see [coverage_tools/README.md](coverage_tools/README.md)**
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass: `python3 -m pytest tests/ -v`
-6. Check coverage: `python3 coverage_tools/scripts/coverage.py full tests/`
-7. Commit your changes: `git commit -am 'Add feature'`
-8. Push to the branch: `git push origin feature-name`
-9. Create a Pull Request
-
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-**Coverage tools not found**:
+**"Coverage tools not found"**:
 ```bash
-# On macOS, add LLVM tools to PATH
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+# Install required tools
+# Ubuntu/Debian:
+sudo apt-get install gcc gcov lcov
+# or
+sudo apt-get install clang llvm
 
-# On Ubuntu, install lcov
-sudo apt-get install lcov
+# macOS:
+brew install gcc lcov
+# or
+brew install llvm
 ```
 
-**Tests failing due to missing executable**:
+**"CMake configuration failed"**:
 ```bash
-# Make sure to build first
-rm -rf build && mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && make
+# Ensure CMake integration is set up
+pydcov init-cmake
+
+# Add to CMakeLists.txt:
+# include(cmake/coverage.cmake)
 ```
 
-**Permission denied on scripts**:
+**"No coverage data found"**:
 ```bash
-chmod +x scripts/*.sh
+# Ensure tests are actually running
+pydcov coverage test "echo 'test command here'"
+
+# Check that executables are built with coverage
+pydcov coverage build
 ```
 
-**Python module not found**:
+**"Permission denied"**:
 ```bash
-pip3 install pytest pytest-cov pytest-xdist pytest-html coverage
+# Make sure PyDCov is properly installed
+pip install --upgrade pydcov
 ```
 
-### Platform-Specific Notes
+### Getting Help
 
-**macOS**:
-- Requires Xcode Command Line Tools
-- LLVM tools are installed via Homebrew
-- Default compiler is Clang
+- 📖 **Documentation**: Check this README and `docs/` directory
+- 🐛 **Issues**: [GitHub Issues](https://github.com/ethan-li/pydcov/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/ethan-li/pydcov/discussions)
 
-**Linux**:
-- Supports both GCC and Clang
-- lcov provides better HTML reports with GCC
-- May require additional development packages
+## 📄 License
 
-## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-This project is released under the MIT License. See [LICENSE](LICENSE) for details.
+## 🙏 Acknowledgments
 
-## Acknowledgments
+- **LLVM Project**: For excellent coverage tools and infrastructure
+- **GCC Project**: For gcov and the foundation of C/C++ coverage analysis
+- **CMake Community**: For the robust build system that makes cross-platform development possible
+- **Python Community**: For the ecosystem that makes this tool possible
 
-- **LLVM Project**: For excellent coverage tools
-- **GCC Project**: For gcov and lcov
-- **pytest**: For the testing framework
-- **GitHub Actions**: For CI/CD infrastructure
-# pydcov
+---
+
+**Made with ❤️ for the C/C++ development community**

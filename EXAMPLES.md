@@ -1,334 +1,578 @@
 # PyDCov Examples and Usage Guide
 
-This document provides detailed examples of how to use the PyDCov project for measuring C code coverage with Python-driven tests, focusing on the dynamic array data structure implementation.
+This document provides comprehensive examples of how to use PyDCov for C/C++ code coverage measurement in various scenarios.
 
-## Basic Usage Examples
+## 🚀 Quick Start Examples
 
-### Building and Running
-
-```bash
-# Clone and setup
-git clone https://github.com/your-username/pydcov.git
-cd pydcov
-
-# Build the project
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && make
-cd ..
-
-# Run all tests (using any testing framework)
-python3 -m pytest tests/ -v                    # pytest
-python3 -m unittest discover tests/            # unittest
-green tests/                                   # green test runner
-
-# Generate coverage report using Python tools
-python3 coverage_tools/scripts/coverage.py full tests/ -v
-```
-
-## Testing Framework Examples
-
-The PyDCov coverage tools support multiple testing frameworks. Here are examples using different approaches:
-
-### Using pytest (Default)
+### Installation and Basic Usage
 
 ```bash
-# Basic coverage workflow with pytest
-python3 coverage_tools/scripts/coverage.py clean
-python3 coverage_tools/scripts/coverage.py build
-python3 coverage_tools/scripts/coverage.py test tests/
-python3 coverage_tools/scripts/coverage.py report
+# Install PyDCov
+pip install pydcov
 
-# Complete workflow in one command
-python3 coverage_tools/scripts/coverage.py full python -m pytest tests/ -v
+# Create a new project
+pydcov init-template my_project
+cd my_project
 
-# Incremental coverage with pytest
-python3 coverage_tools/scripts/incremental_coverage.py init
-python3 coverage_tools/scripts/incremental_coverage.py add python -m pytest tests/test_dynarray.py -v
-python3 coverage_tools/scripts/incremental_coverage.py add python -m pytest tests/test_statistics.py -k "test_mean"
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
+# Build and test
+mkdir build && cd build
+cmake ..
+make
+
+# Generate coverage report
+pydcov coverage full "make test"
 ```
 
-### Using unittest
+### Adding to Existing Project
+
+```bash
+# Add PyDCov to existing CMake project
+cd my_existing_project
+pydcov init-cmake
+
+# Update CMakeLists.txt to include:
+# include(cmake/coverage.cmake)
+
+# Run coverage analysis
+pydcov coverage full "python -m pytest tests/"
+```
+
+## 📋 Command Examples
+
+### Coverage Commands
+
+```bash
+# Complete coverage workflow
+pydcov coverage full "python -m pytest tests/"
+
+# Step-by-step coverage
+pydcov coverage clean          # Clean previous coverage data
+pydcov coverage build          # Build with coverage instrumentation
+pydcov coverage test "make test"  # Run tests with coverage collection
+pydcov coverage report         # Generate coverage reports
+
+# Check coverage status
+pydcov coverage status
+```
+
+### Incremental Coverage
+
+```bash
+# Initialize incremental tracking
+pydcov incremental init
+
+# Add coverage from different test runs
+pydcov incremental add "python -m pytest tests/unit/"
+pydcov incremental add "python -m pytest tests/integration/"
+pydcov incremental add "python -m pytest tests/e2e/"
+
+# Generate combined report
+pydcov incremental report
+
+# Check incremental status
+pydcov incremental status
+
+# Clean incremental data
+pydcov incremental clean
+```
+
+## 🧪 Testing Framework Examples
+
+PyDCov works with any testing framework or executable:
+
+### With pytest
+
+```bash
+# Basic pytest usage
+pydcov coverage full "python -m pytest tests/"
+
+# With specific options
+pydcov coverage full "python -m pytest tests/ -v --tb=short"
+
+# Test specific modules
+pydcov incremental add "python -m pytest tests/unit/"
+pydcov incremental add "python -m pytest tests/integration/"
+```
+
+### With unittest
 
 ```bash
 # Standard unittest discovery
-python3 coverage_tools/scripts/coverage.py test python -m unittest discover tests/
-python3 coverage_tools/scripts/coverage.py full python -m unittest discover tests/
+pydcov coverage full "python -m unittest discover tests/"
 
-# Specific unittest modules
-python3 coverage_tools/scripts/incremental_coverage.py add python -m unittest tests.test_dynarray
-python3 coverage_tools/scripts/incremental_coverage.py add python -m unittest tests.test_statistics
+# Specific test modules
+pydcov coverage full "python -m unittest tests.test_calculator"
 
-# Module-specific testing with unittest
-python3 coverage_tools/scripts/coverage_modules.py test algorithm --test-command python -m unittest discover algorithm/tests/
-python3 coverage_tools/scripts/coverage_modules.py full statistics --test-command python -m unittest discover statistics/tests/
+# Incremental with unittest
+pydcov incremental init
+pydcov incremental add "python -m unittest tests.test_basic"
+pydcov incremental add "python -m unittest tests.test_advanced"
+pydcov incremental report
 ```
 
-### Using Custom Test Scripts
+### With CMake/CTest
 
 ```bash
-# Create a custom test script
-cat > run_custom_tests.sh << 'EOF'
+# Using make test
+pydcov coverage full "make test"
+
+# Using ctest directly
+pydcov coverage full "ctest --verbose"
+
+# With specific test patterns
+pydcov coverage full "ctest -R unit_tests"
+```
+
+### With Custom Test Scripts
+
+```bash
+# Create custom test script
+cat > run_tests.sh << 'EOF'
 #!/bin/bash
-echo "Running custom test suite..."
-python3 -m unittest discover tests/ -v
-echo "Running additional validation..."
-./build/algorithm_cli --test
-./build/statistics_cli --test
+echo "Running unit tests..."
+python -m pytest tests/unit/ -v
+echo "Running integration tests..."
+python -m pytest tests/integration/ -v
+echo "Running custom validation..."
+./build/my_app --self-test
 EOF
-chmod +x run_custom_tests.sh
+chmod +x run_tests.sh
 
-# Use custom script with coverage tools
-python3 coverage_tools/scripts/coverage.py test ./run_custom_tests.sh
-python3 coverage_tools/scripts/coverage.py full ./run_custom_tests.sh
-
-# Incremental coverage with custom commands
-python3 coverage_tools/scripts/incremental_coverage.py init
-python3 coverage_tools/scripts/incremental_coverage.py add ./run_custom_tests.sh
-python3 coverage_tools/scripts/incremental_coverage.py add make test
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
+# Use with PyDCov
+pydcov coverage full "./run_tests.sh"
 ```
 
-### Using Other Testing Frameworks
+### With Other Testing Tools
 
 ```bash
-# Using green test runner
-python3 coverage_tools/scripts/coverage.py test green tests/
-python3 coverage_tools/scripts/coverage.py full green tests/ -v
+# Using Google Test
+pydcov coverage full "./build/my_gtest_executable"
 
-# Using nose2
-python3 coverage_tools/scripts/coverage.py test nose2 tests/
-python3 coverage_tools/scripts/incremental_coverage.py add nose2 tests/ --verbose
+# Using Catch2
+pydcov coverage full "./build/my_catch2_tests"
 
-# Using make targets
-python3 coverage_tools/scripts/coverage.py test make test
-python3 coverage_tools/scripts/coverage.py full make check
+# Using custom executables
+pydcov coverage full "./build/my_custom_test_runner --all"
 ```
 
-### Command-Line Interface Examples
+## 🏗️ Project Template Examples
 
-The project implements a dynamic array data structure accessible via command-line:
-
-#### Dynamic Array Operations
+### Creating New Projects
 
 ```bash
-# Create a dynamic array
-./build/pydcov dynarray create 5             # Output: Array created with capacity 5
+# Create basic C++ project
+pydcov init-template calculator --template basic_cpp
 
-# Push values to the array
-./build/pydcov dynarray push 10 20 30        # Output: Pushed 3 values. Array size: 3
-./build/pydcov dynarray push 40 50           # Output: Pushed 2 values. Array size: 5
-
-# Get values from the array
-./build/pydcov dynarray get 0                # Output: 10
-./build/pydcov dynarray get 2                # Output: 30
-./build/pydcov dynarray get 4                # Output: 50
-
-# Pop values from the array
-./build/pydcov dynarray pop                  # Output: 50 (pops 1 value by default)
-./build/pydcov dynarray pop 2                # Output: 40 30 (pops 2 values)
-
-# Clean up the array
-./build/pydcov dynarray cleanup              # Output: Array cleaned up
-```
-
-## Coverage Workflow Examples
-
-### Using the Python Coverage Tools
-
-```bash
-# Full automated workflow
-python3 coverage_tools/scripts/coverage.py full tests/
-
-# Step-by-step workflow
-python3 coverage_tools/scripts/coverage.py clean     # Clean previous coverage data
-python3 coverage_tools/scripts/coverage.py build     # Build with coverage instrumentation
-python3 coverage_tools/scripts/coverage.py test tests/  # Run tests with coverage collection
-python3 coverage_tools/scripts/coverage.py report    # Generate coverage reports
-
-# Check status
-python3 coverage_tools/scripts/coverage.py status
-
-# Get help for any command
-python3 coverage_tools/scripts/coverage.py help
-```
-
-### Manual Coverage Workflow
-
-#### Using GCC and gcov
-
-```bash
-# Build with GCC coverage
-rm -rf build && mkdir -p build && cd build
-CC=gcc CXX=g++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+# Navigate and build
+cd calculator
+mkdir build && cd build
+cmake ..
 make
-cd ..
 
-# Run tests (gcov automatically collects data)
-python3 -m pytest tests/ -v
-
-# Generate coverage report
-make coverage-report
-
-# View the report
-open build/coverage/html/index.html
+# Run tests and coverage
+pydcov coverage full "make test"
 ```
 
-#### Using Clang and llvm-cov
+### Template Structure
+
+The generated project includes:
+
+```
+calculator/
+├── CMakeLists.txt          # Main CMake configuration
+├── cmake/
+│   ├── coverage.cmake      # PyDCov integration
+│   └── COVERAGE_USAGE.md   # Usage documentation
+├── src/                    # Library source code
+│   ├── calculator.hpp
+│   ├── calculator.cpp
+│   └── CMakeLists.txt
+├── app/                    # Application executable
+│   └── main.cpp
+├── tests/                  # Test source code
+│   ├── test_calculator.cpp
+│   └── CMakeLists.txt
+└── README.md               # Project documentation
+```
+
+## 💻 Python API Examples
+
+### Using PyDCov Programmatically
+
+```python
+from pydcov import CoverageManager, IncrementalCoverageManager
+
+# Basic coverage workflow
+def run_coverage_analysis():
+    manager = CoverageManager()
+
+    # Clean previous data
+    manager.clean()
+
+    # Build with coverage
+    success = manager.build()
+    if not success:
+        print("Build failed!")
+        return False
+
+    # Run tests
+    success = manager.test(["python", "-m", "pytest", "tests/"])
+    if not success:
+        print("Tests failed!")
+        return False
+
+    # Generate report
+    success = manager.report()
+    if not success:
+        print("Report generation failed!")
+        return False
+
+    print("Coverage analysis completed successfully!")
+    return True
+
+# Incremental coverage workflow
+def run_incremental_coverage():
+    manager = IncrementalCoverageManager()
+
+    # Initialize incremental tracking
+    manager.init()
+
+    # Add coverage from different test suites
+    test_suites = [
+        ["python", "-m", "pytest", "tests/unit/"],
+        ["python", "-m", "pytest", "tests/integration/"],
+        ["python", "-m", "pytest", "tests/e2e/"]
+    ]
+
+    for test_cmd in test_suites:
+        success = manager.add(test_cmd)
+        if not success:
+            print(f"Failed to add coverage for: {' '.join(test_cmd)}")
+            return False
+
+    # Generate combined report
+    success = manager.report()
+    if not success:
+        print("Failed to generate incremental report!")
+        return False
+
+    print("Incremental coverage analysis completed!")
+    return True
+
+# Custom project setup
+def setup_project_coverage(project_path):
+    import os
+    from pathlib import Path
+
+    os.chdir(project_path)
+
+    # Initialize CMake integration
+    from pydcov.cli import handle_init_cmake_command
+    from argparse import Namespace
+
+    args = Namespace(project_root=Path.cwd(), force=False)
+    result = handle_init_cmake_command(args)
+
+    if result == 0:
+        print("CMake integration set up successfully!")
+        print("Add 'include(cmake/coverage.cmake)' to your CMakeLists.txt")
+    else:
+        print("Failed to set up CMake integration!")
+
+    return result == 0
+
+# Run the examples
+if __name__ == "__main__":
+    run_coverage_analysis()
+    run_incremental_coverage()
+```
+
+## 🔧 Advanced Configuration Examples
+
+### Custom CMake Integration
+
+```cmake
+# Advanced CMakeLists.txt with PyDCov
+cmake_minimum_required(VERSION 3.10)
+project(MyAdvancedProject)
+
+# Include PyDCov coverage support
+include(cmake/coverage.cmake)
+
+# Set custom coverage options
+set(COVERAGE_EXCLUDES
+    "*/tests/*"
+    "*/third_party/*"
+    "*/build/*"
+)
+
+# Create library with coverage
+add_library(mylib
+    src/core.cpp
+    src/utils.cpp
+    src/algorithms.cpp
+)
+
+# Create executable with coverage
+add_executable(myapp
+    app/main.cpp
+)
+target_link_libraries(myapp mylib)
+
+# Create test executable
+add_executable(mytests
+    tests/test_core.cpp
+    tests/test_utils.cpp
+    tests/test_algorithms.cpp
+)
+target_link_libraries(mytests mylib)
+
+# Add test to CTest
+enable_testing()
+add_test(NAME unit_tests COMMAND mytests)
+add_test(NAME integration_tests COMMAND myapp --test)
+
+# Custom coverage targets are automatically created by coverage.cmake
+```
+
+### Environment-Specific Configuration
 
 ```bash
-# Ensure LLVM tools are in PATH (macOS)
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+# Development environment
+export PYDCOV_BUILD_TYPE=Debug
+export PYDCOV_COVERAGE_FORMAT=html
+export PYDCOV_VERBOSE=1
 
-# Build with Clang coverage
-rm -rf build && mkdir -p build && cd build
-CC=clang CXX=clang++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
-make
-cd ..
+# CI environment
+export PYDCOV_BUILD_TYPE=Release
+export PYDCOV_COVERAGE_FORMAT=xml
+export PYDCOV_PARALLEL_JOBS=4
 
-# Set up coverage data collection
-export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
-
-# Run tests
-python3 -m pytest tests/ -v
-
-# Generate coverage report
-make coverage-report
-
-# View the report
-open build/coverage/html/index.html
+# Use environment variables
+pydcov coverage full "python -m pytest tests/"
 ```
 
-## Test Examples
+## 🚀 CI/CD Integration Examples
 
-### Running Specific Tests
-
-```bash
-# Run the dynamic array tests
-python3 -m pytest tests/test_dynarray.py -v
-
-# Run a specific test function
-python3 -m pytest tests/test_dynarray.py::TestDynamicArrayOperations::test_dynarray_create_basic -v
-
-# Run tests with specific markers
-python3 -m pytest tests/ -m "not slow" -v
-
-# Run tests in parallel
-python3 -m pytest tests/ -n auto -v
-```
-
-### Test Output Examples
-
-```bash
-# Successful test run
-$ python3 -m pytest tests/test_dynarray.py::TestDynamicArrayOperations::test_dynarray_create_basic -v
-==================================================== test session starts =====================================================
-platform darwin -- Python 3.11.9, pytest-8.4.1, pluggy-1.6.0
-collecting ... collected 1 item
-
-tests/test_dynarray.py::TestDynamicArrayOperations::test_dynarray_create_basic PASSED                              [100%]
-
-===================================================== 1 passed in 0.05s ======================================================
-
-# Coverage report summary
-$ make coverage-report
-Filename                      Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
-algorithm.c                       214                18    91.59%          16                 0   100.00%         162                 3    98.15%
-main.cpp                          220                20    90.91%          10                 1    90.00%         356                72    79.78%
-TOTAL                             434                38    91.24%          26                 1    96.15%         518                75    85.52%
-```
-
-## Integration Examples
-
-### Extending the Dynamic Array
-
-1. **Add new function to `src/algorithm.h`**:
-   ```c
-   int array_size(const dynamic_array_t* arr);
-   int array_capacity(const dynamic_array_t* arr);
-   ```
-
-2. **Implement in `src/algorithm.c`**:
-   ```c
-   int array_size(const dynamic_array_t* arr) {
-       if (arr == NULL) return -1;
-       return arr->size;
-   }
-
-   int array_capacity(const dynamic_array_t* arr) {
-       if (arr == NULL) return -1;
-       return arr->capacity;
-   }
-   ```
-
-3. **Add CLI support in `src/main.cpp`**:
-   ```cpp
-   else if (operation == "size") {
-       dynamic_array_t* arr = load_array_from_file();
-       if (arr == nullptr) {
-           std::cerr << "Error: No array created. Use 'dynarray create' first\n";
-           return 1;
-       }
-       std::cout << array_size(arr) << std::endl;
-       destroy_array(arr);
-   }
-   ```
-
-4. **Add tests in `tests/test_dynarray.py`**:
-   ```python
-   def test_dynarray_size(self):
-       """Test getting array size."""
-       assert_command_success(["dynarray", "create", "10"])
-       assert_command_success(["dynarray", "push", "1", "2", "3"])
-
-       result = assert_command_success(["dynarray", "size"])
-       size = int(result.stdout.strip())
-       assert size == 3
-   ```
-
-### Custom Coverage Targets
-
-You can customize coverage collection for specific scenarios:
-
-```bash
-# Test only specific functionality
-export LLVM_PROFILE_FILE="build/math-coverage-%p.profraw"
-python3 -m pytest tests/test_math.py -v
-
-# Generate focused coverage report
-llvm-profdata merge -sparse build/math-coverage-*.profraw -o build/math-coverage.profdata
-llvm-cov show build/pydcov -instr-profile=build/math-coverage.profdata -format=html -output-dir=build/math-coverage-html
-```
-
-## CI/CD Examples
-
-### GitHub Actions Integration
-
-The project includes a complete CI workflow. Here's how to customize it:
+### GitHub Actions
 
 ```yaml
-# Add a new platform to test matrix
-strategy:
-  matrix:
-    os: [ubuntu-latest, macos-latest, windows-latest]  # Add Windows
-    compiler: [gcc, clang, msvc]  # Add MSVC for Windows
+name: Coverage Analysis
+on: [push, pull_request]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install PyDCov
+        run: pip install pydcov
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get install -y gcc gcov lcov
+          else
+            sudo apt-get install -y clang llvm
+          fi
+
+      - name: Setup project
+        run: pydcov init-cmake
+
+      - name: Build project
+        run: |
+          mkdir build && cd build
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            CC=gcc CXX=g++ cmake ..
+          else
+            CC=clang CXX=clang++ cmake ..
+          fi
+          make
+
+      - name: Run coverage analysis
+        run: pydcov coverage full "python -m pytest tests/"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: ${{ matrix.compiler }}
+          name: codecov-${{ matrix.compiler }}
 ```
 
-### Local CI Simulation
+### GitLab CI
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - test
+  - coverage
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip/
+
+coverage:
+  stage: coverage
+  image: python:3.9
+  before_script:
+    - apt-get update -qq && apt-get install -y cmake build-essential gcc gcov lcov
+    - pip install pydcov
+  script:
+    - pydcov init-cmake
+    - mkdir build && cd build && cmake .. && make && cd ..
+    - pydcov coverage full "python -m pytest tests/"
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage_html/
+    expire_in: 1 week
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+```
+
+### Jenkins Pipeline
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('Setup') {
+            steps {
+                sh 'pip install pydcov'
+                sh 'pydcov init-cmake'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                    mkdir -p build
+                    cd build
+                    cmake ..
+                    make
+                '''
+            }
+        }
+
+        stage('Coverage') {
+            steps {
+                sh 'pydcov coverage full "python -m pytest tests/"'
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'coverage_html',
+                        reportFiles: 'index.html',
+                        reportName: 'Coverage Report'
+                    ])
+                }
+            }
+        }
+    }
+}
+```
+
+## 🔍 Real-World Examples
+
+### Example: Calculator Library
+
+This shows how to use PyDCov with a real calculator project:
 
 ```bash
-# Simulate the CI workflow locally
-./scripts/install_deps.sh
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && make
-cd .. && python3 -m pytest tests/ -v
-rm -rf build && mkdir -p build && cd build
-cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug && make
-cd .. && export LLVM_PROFILE_FILE="build/coverage-%p.profraw"
-python3 -m pytest tests/ -v
-cd build && make coverage-report
+# Create the project
+pydcov init-template calculator_lib
+
+# Navigate to project
+cd calculator_lib
+
+# Examine the generated structure
+tree .
+# calculator_lib/
+# ├── CMakeLists.txt
+# ├── cmake/
+# │   ├── coverage.cmake
+# │   └── COVERAGE_USAGE.md
+# ├── src/
+# │   ├── calculator.hpp
+# │   ├── calculator.cpp
+# │   └── CMakeLists.txt
+# ├── app/
+# │   └── main.cpp
+# ├── tests/
+# │   ├── test_calculator.cpp
+# │   └── CMakeLists.txt
+# └── README.md
+
+# Build and test
+mkdir build && cd build
+cmake ..
+make
+
+# Run the application
+./calculator_lib
+# Output: Calculator Demo with add, subtract, multiply, divide operations
+
+# Run tests
+make test
+# Output: All tests passed
+
+# Generate coverage report
+cd ..
+pydcov coverage full "make test"
+
+# View coverage results
+open coverage_html/index.html
 ```
 
-This comprehensive example set demonstrates how to use PyDCov for various scenarios, from basic usage to advanced integration and customization.
+### Example: Integration with Existing Project
+
+```bash
+# Add PyDCov to existing project
+cd my_existing_cpp_project
+
+# Initialize PyDCov
+pydcov init-cmake
+
+# Update CMakeLists.txt (add this line)
+echo "include(cmake/coverage.cmake)" >> CMakeLists.txt
+
+# Build with coverage
+mkdir build && cd build
+cmake ..
+make
+
+# Run your existing tests with coverage
+cd ..
+pydcov coverage full "python -m pytest tests/"
+# or
+pydcov coverage full "make test"
+# or
+pydcov coverage full "./my_custom_test_runner"
+
+# View results
+open coverage_html/index.html
+```
+
+This comprehensive guide demonstrates PyDCov's flexibility and ease of use across different scenarios, from simple projects to complex CI/CD integrations.

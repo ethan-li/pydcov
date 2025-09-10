@@ -1,19 +1,77 @@
-# CMake Modular Architecture - Technical Documentation
+# PyDCov CMake Integration - Technical Documentation
 
 ## Table of Contents
 
-1. [Overall Architecture Summary](#overall-architecture-summary)
-2. [CMakeLists.txt - Core Build Configuration Analysis](#cmakelists-txt---core-build-configuration-analysis)
-3. [cmake/coverage.cmake - Coverage Module Analysis](#cmake-coverage-cmake---coverage-module-analysis)
+1. [PyDCov CMake Integration Overview](#pydcov-cmake-integration-overview)
+2. [coverage.cmake Module Analysis](#coverage-cmake-module-analysis)
+3. [Integration with PyDCov Package](#integration-with-pydcov-package)
 4. [Technical Implementation Details](#technical-implementation-details)
-5. [Integration Patterns](#integration-patterns)
-6. [Advanced Code Examples and Patterns](#advanced-code-examples-and-patterns)
+5. [Cross-Platform Compatibility](#cross-platform-compatibility)
+6. [Advanced Usage Patterns](#advanced-usage-patterns)
 
-## Overall Architecture Summary
+## PyDCov CMake Integration Overview
 
-### Modular Design Philosophy
+### Architecture Philosophy
 
-The refactored CMake configuration implements a **separation of concerns** architecture that divides the build system into two distinct layers:
+PyDCov provides a comprehensive CMake module (`coverage.cmake`) that seamlessly integrates C/C++ coverage analysis into any CMake-based project. The architecture follows a **plug-and-play** design philosophy:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Your Project                              │
+│                  CMakeLists.txt                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ cmake_minimum_required(VERSION 3.10)               │   │
+│  │ project(MyProject)                                  │   │
+│  │                                                     │   │
+│  │ # Include PyDCov coverage support                   │   │
+│  │ include(cmake/coverage.cmake)                       │   │
+│  │                                                     │   │
+│  │ # Your project configuration                        │   │
+│  │ add_executable(my_app src/main.cpp)                 │   │
+│  │ add_library(my_lib src/library.cpp)                 │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                           │                                 │
+│                           │ include()                       │
+│                           ▼                                 │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              cmake/coverage.cmake                   │   │
+│  │              (PyDCov Module)                        │   │
+│  │ • Automatic Compiler Detection                      │   │
+│  │ • Coverage Flag Configuration                       │   │
+│  │ • Tool Discovery (gcov/llvm-cov)                    │   │
+│  │ • Custom Target Creation                            │   │
+│  │ • Cross-Platform Support                            │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Integration with PyDCov Package
+
+The CMake module works seamlessly with the PyDCov Python package:
+
+```bash
+# Install PyDCov
+pip install pydcov
+
+# Initialize CMake integration
+pydcov init-cmake
+
+# Build and run coverage
+mkdir build && cd build
+cmake ..
+make
+cd ..
+pydcov coverage full "make test"
+```
+
+### Key Benefits
+
+1. **Zero Configuration**: Works out-of-the-box with any CMake project
+2. **Automatic Detection**: Detects available compilers and coverage tools
+3. **Cross-Platform**: Supports Linux, macOS, and Windows
+4. **Multi-Compiler**: Works with GCC/gcov and Clang/llvm-cov
+5. **Framework Agnostic**: Compatible with any testing framework
+6. **PyDCov Integration**: Seamless integration with PyDCov CLI tools
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

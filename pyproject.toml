@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pydcov"
+version = "1.0.0"
+description = "Python-based C/C++ code coverage tools for CMake projects"
+readme = "README_PACKAGE.md"
+license = "MIT"
+authors = [
+    {name = "PyDCov Project", email = "pydcov@example.com"}
+]
+maintainers = [
+    {name = "PyDCov Project", email = "pydcov@example.com"}
+]
+keywords = [
+    "coverage", "c", "cpp", "cmake", "testing", "gcov", "llvm-cov"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+requires-python = ">=3.8"
+dependencies = [
+    # All dependencies are standard library
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=22.0.0",
+    "flake8>=4.0.0", 
+    "mypy>=0.900",
+    "pytest>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ethan-li/pydcov"
+Documentation = "https://github.com/ethan-li/pydcov/blob/main/README.md"
+Repository = "https://github.com/ethan-li/pydcov.git"
+"Bug Tracker" = "https://github.com/ethan-li/pydcov/issues"
+
+[project.scripts]
+pydcov = "pydcov.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pydcov*"]
+
+[tool.setuptools.package-data]
+pydcov = ["cmake/*.cmake", "cmake/*.md", "templates/**/*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

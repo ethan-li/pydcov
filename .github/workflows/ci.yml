@@ -53,7 +53,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov pytest-xdist pytest-html coverage
+        pip install pytest pytest-cov pytest-xdist pytest-html coverage build wheel
 
     - name: Set up environment variables
       run: |
@@ -87,8 +87,31 @@ jobs:
         cmake .. -DCMAKE_BUILD_TYPE=Release
         make
 
-    - name: Run tests (without coverage)
+    - name: Test PyDCov package installation
       run: |
+        # Build and install PyDCov package
+        python -m build --wheel
+        pip install dist/*.whl
+
+        # Verify installation
+        pydcov --version
+        python -c "import pydcov; print('PyDCov package imported successfully')"
+
+    - name: Run PyDCov package tests
+      run: |
+        # Test package functionality
+        python -m pytest tests/test_package_installation.py -v --tb=short
+        python -m pytest tests/test_cli_commands.py -v --tb=short
+        python -m pytest tests/test_template_system.py -v --tb=short
+
+    - name: Run integration tests
+      run: |
+        # Test integration scenarios (marked as slow)
+        python -m pytest tests/test_integration.py -v --tb=short -m "not slow"
+
+    - name: Run example module tests
+      run: |
+        # Test the example C/C++ modules
         python -m pytest examples/algorithm/tests/ examples/statistics/tests/ -v --tb=short
 
     - name: Build with coverage
@@ -103,6 +126,27 @@ jobs:
           CC=clang CXX=clang++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
         fi
         make
+
+    - name: Test template system with coverage build
+      run: |
+        # Test that generated templates work with coverage
+        pydcov init-template coverage_test_project --template basic_cpp
+        cd coverage_test_project
+        mkdir build && cd build
+
+        # Try to configure with coverage (might fail due to missing tools)
+        if cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug; then
+          make
+          make test
+          echo "Coverage build successful"
+        else
+          echo "Coverage build failed (likely due to missing coverage tools)"
+          # Try regular build instead
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          make
+          make test
+        fi
+        cd ../..
 
     - name: Run tests with coverage
       run: |
@@ -133,10 +177,76 @@ jobs:
           !build/coverage/*.profraw
         retention-days: 7
 
+  package-test:
+    name: Test PyDCov Package Distribution
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build wheel pytest
+
+    - name: Build wheel
+      run: |
+        python -m build --wheel
+        ls -la dist/
+
+    - name: Test wheel installation
+      run: |
+        # Install from wheel
+        pip install dist/*.whl
+
+        # Test basic functionality
+        pydcov --version
+        pydcov --help
+
+        # Test imports
+        python -c "import pydcov; print('Package imported successfully')"
+        python -c "from pydcov import CoverageManager, IncrementalCoverageManager; print('Core classes imported')"
+
+    - name: Test template creation
+      run: |
+        # Test template system
+        pydcov init-template test_wheel_project --template basic_cpp
+        ls -la test_wheel_project/
+
+        # Verify template structure
+        test -f test_wheel_project/CMakeLists.txt
+        test -f test_wheel_project/README.md
+        test -d test_wheel_project/src
+        test -d test_wheel_project/tests
+        test -d test_wheel_project/cmake
+
+    - name: Test CMake integration
+      run: |
+        mkdir test_cmake_integration
+        pydcov init-cmake --project-root test_cmake_integration
+        test -f test_cmake_integration/cmake/coverage.cmake
+        test -f test_cmake_integration/cmake/COVERAGE_USAGE.md
+
+    - name: Upload wheel artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pydcov-wheel-python${{ matrix.python-version }}
+        path: dist/*.whl
+        retention-days: 7
+
   package:
     name: Package Deliverable Files
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, package-test]
 
     steps:
     - name: Checkout code
@@ -150,17 +260,23 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r coverage_tools/requirements.txt
+        pip install build wheel
+
+    - name: Build PyDCov wheel
+      run: |
+        python -m build --wheel
 
     - name: Create deliverable package
       run: |
-        mkdir -p dist/pydcov-package/examples
+        mkdir -p dist/pydcov-package
+
+        # Copy PyDCov wheel
+        cp dist/*.whl dist/pydcov-package/
 
         # Copy core deliverable files
-        cp -r coverage_tools/ dist/pydcov-package/
+        cp -r pydcov/ dist/pydcov-package/
         cp -r cmake/ dist/pydcov-package/
         cp -r docs/ dist/pydcov-package/
-        cp -r scripts/ dist/pydcov-package/
 
         # Copy root configuration files
         cp CMakeLists.txt dist/pydcov-package/
@@ -170,7 +286,8 @@ jobs:
         cp pytest.ini dist/pydcov-package/
         cp EXAMPLES.md dist/pydcov-package/
         cp CMAKE_TECHNICAL_DOCUMENTATION.md dist/pydcov-package/
-        cp PACKAGE_README.md dist/pydcov-package/PACKAGE_README.md
+        cp pyproject.toml dist/pydcov-package/
+        cp MANIFEST.in dist/pydcov-package/
 
         # Copy example modules (for demonstration)
         cp -r examples/ dist/pydcov-package/

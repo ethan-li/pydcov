@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Root-level pytest configuration for the pydcov test suite.
+Pytest configuration for PyDCov package tests.
 
-This configuration file provides shared settings and fixtures for all test modules
-in the unified tests/ directory structure.
+Provides shared fixtures and configuration for testing the PyDCov package functionality.
 """
 
 import pytest
+import tempfile
+import shutil
+import subprocess
 import os
 import sys
 from pathlib import Path
@@ -36,6 +38,15 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "coverage_tools: marks tests for the coverage tools"
     )
+    config.addinivalue_line(
+        "markers", "package: marks tests for PyDCov package functionality"
+    )
+    config.addinivalue_line(
+        "markers", "cli: marks tests for CLI interface"
+    )
+    config.addinivalue_line(
+        "markers", "template: marks tests for template system"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -53,13 +64,22 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.statistics)
         elif "/coverage_tools/" in test_path:
             item.add_marker(pytest.mark.coverage_tools)
+        elif "test_package_installation" in test_path:
+            item.add_marker(pytest.mark.package)
+        elif "test_cli_commands" in test_path:
+            item.add_marker(pytest.mark.cli)
+        elif "test_template_system" in test_path:
+            item.add_marker(pytest.mark.template)
+        elif "test_integration" in test_path:
+            item.add_marker(pytest.mark.integration)
         
         # Mark statistical calculation tests
         if "statistics" in item.name or "calculation" in item.name:
             item.add_marker(pytest.mark.statistical)
         
-        # Mark all tests as integration tests since they test CLI interfaces
-        item.add_marker(pytest.mark.integration)
+        # Mark template and integration tests as slow by default
+        if "template" in test_path or "integration" in test_path:
+            item.add_marker(pytest.mark.slow)
 
 
 # Pytest command line options
@@ -83,6 +103,18 @@ def pytest_addoption(parser):
         default=None,
         help="Path to the statistics executable"
     )
+    parser.addoption(
+        "--run-slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests"
+    )
+    parser.addoption(
+        "--skip-integration",
+        action="store_true",
+        default=False,
+        help="Skip integration tests"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -95,6 +127,99 @@ def coverage_build(request):
 def project_root_path():
     """Get the project root path."""
     return project_root
+
+
+@pytest.fixture(scope="function")
+def temp_directory():
+    """Provide a temporary directory for tests."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture(scope="session")
+def pydcov_installed():
+    """Check if PyDCov is installed and available."""
+    try:
+        result = subprocess.run(['pydcov', '--version'], capture_output=True, text=True)
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
+@pytest.fixture(scope="session")
+def cmake_available():
+    """Check if CMake is available."""
+    try:
+        result = subprocess.run(['cmake', '--version'], capture_output=True, text=True)
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
+@pytest.fixture(scope="session")
+def make_available():
+    """Check if make is available."""
+    try:
+        result = subprocess.run(['make', '--version'], capture_output=True, text=True)
+        return result.returncode == 0
+    except FileNotFoundError:
+        return False
+
+
+@pytest.fixture(scope="session")
+def build_tools_available(cmake_available, make_available):
+    """Check if build tools (CMake and make) are available."""
+    return cmake_available and make_available
+
+
+@pytest.fixture(scope="session")
+def algorithm_executable_path(request):
+    """Get the algorithm executable path."""
+    path = request.config.getoption("--executable-path")
+    if path:
+        return Path(path)
+
+    # Default path
+    return Path(__file__).parent.parent / "examples" / "algorithm" / "build" / "algorithm"
+
+
+@pytest.fixture(scope="session")
+def statistics_executable_path(request):
+    """Get the statistics executable path."""
+    path = request.config.getoption("--statistics-executable-path")
+    if path:
+        return Path(path)
+
+    # Default path
+    return Path(__file__).parent.parent / "examples" / "statistics" / "build" / "statistics"
+
+
+def skip_if_no_pydcov():
+    """Skip test if PyDCov is not installed."""
+    try:
+        subprocess.run(['pydcov', '--version'], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pytest.skip("PyDCov not installed or not working")
+
+
+def skip_if_no_build_tools():
+    """Skip test if build tools are not available."""
+    try:
+        subprocess.run(['cmake', '--version'], capture_output=True, check=True)
+        subprocess.run(['make', '--version'], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pytest.skip("Build tools (CMake/make) not available")
+
+
+def pytest_runtest_setup(item):
+    """Setup for individual test runs."""
+    # Skip slow tests unless explicitly requested
+    if "slow" in item.keywords and not item.config.getoption("--run-slow"):
+        pytest.skip("Slow test skipped (use --run-slow to run)")
+
+    # Skip integration tests if requested
+    if "integration" in item.keywords and item.config.getoption("--skip-integration"):
+        pytest.skip("Integration test skipped")
 
 
 # Cleanup fixtures
