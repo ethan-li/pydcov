@@ -33,19 +33,19 @@ pydcov/
 │   ├── install_deps.sh     # Dependency installation script
 │   ├── test_coverage_fix.sh # Coverage verification script
 │   └── verify_deployment.sh # Pre-deployment verification
-├── tests/                  # Unified test suite
-│   ├── algorithm/         # Tests for algorithm example module
-│   ├── statistics/        # Tests for statistics example module
-│   ├── coverage_tools/    # Tests for coverage tools (future)
+├── examples/               # Example C library modules
+│   ├── algorithm/         # Dynamic array example module
+│   │   ├── src/           # Algorithm library source code
+│   │   ├── app/           # Algorithm CLI application
+│   │   ├── tests/         # Algorithm module tests
+│   │   └── CMakeLists.txt # Module build configuration
+│   └── statistics/        # Statistical analysis example module
+│       ├── src/           # Statistics library source code
+│       ├── app/           # Statistics CLI application
+│       ├── tests/         # Statistics module tests
+│       └── CMakeLists.txt # Module build configuration
+├── tests/                  # Root test configuration (if needed)
 │   └── conftest.py        # Root pytest configuration
-├── algorithm/              # Example C library module
-│   ├── src/               # Algorithm library source code
-│   ├── app/               # Algorithm CLI application
-│   └── CMakeLists.txt     # Module build configuration
-├── statistics/             # Example C library module
-│   ├── src/               # Statistics library source code
-│   ├── app/               # Statistics CLI application
-│   └── CMakeLists.txt     # Module build configuration
 ├── .github/workflows/      # CI/CD configuration
 │   └── ci.yml              # GitHub Actions workflow with artifact packaging
 ├── CMakeLists.txt          # Root CMake build configuration
@@ -66,8 +66,8 @@ pydcov/
 - Root configuration files
 
 **Example/Demo Components** (for testing and demonstration):
-- `algorithm/` and `statistics/` - Example C library modules
-- `tests/` - Test suite for all components
+- `examples/algorithm/` and `examples/statistics/` - Example C library modules with co-located tests
+- `tests/` - Root test configuration
 
 ## Quick Start
 
@@ -352,22 +352,22 @@ The project includes a comprehensive test suite with **16 test cases** covering 
 python3 -m pytest tests/ -v
 
 # Run tests for specific modules
-python3 -m pytest tests/algorithm/ -v    # Algorithm module tests
-python3 -m pytest tests/statistics/ -v   # Statistics module tests
+python3 -m pytest examples/algorithm/tests/ -v    # Algorithm module tests
+python3 -m pytest examples/statistics/tests/ -v   # Statistics module tests
 
 # Run tests with specific markers
-python3 -m pytest tests/ -m "algorithm" -v
-python3 -m pytest tests/ -m "statistics" -v
-python3 -m pytest tests/ -m "not slow" -v
+python3 -m pytest examples/ -m "algorithm" -v
+python3 -m pytest examples/ -m "statistics" -v
+python3 -m pytest examples/ -m "not slow" -v
 
 # Run with coverage (Python-level)
-python3 -m pytest tests/ --cov=coverage_tools --cov-report=html
+python3 -m pytest examples/ --cov=coverage_tools --cov-report=html
 
 # Run in parallel
-python3 -m pytest tests/ -n auto
+python3 -m pytest examples/ -n auto
 
 # Generate HTML test report
-python3 -m pytest tests/ --html=report.html --self-contained-html
+python3 -m pytest examples/ --html=report.html --self-contained-html
 ```
 
 ### Coverage Analysis

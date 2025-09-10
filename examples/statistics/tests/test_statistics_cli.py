@@ -11,7 +11,7 @@ from pathlib import Path
 # Add current directory to path for local imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from tests.statistics.statistics_test_utils import (
+from examples.statistics.tests.statistics_test_utils import (
     assert_statistics_command_success,
     assert_statistics_command_failure,
     parse_statistics_output,

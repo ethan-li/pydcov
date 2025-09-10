@@ -89,7 +89,7 @@ jobs:
 
     - name: Run tests (without coverage)
       run: |
-        python -m pytest tests/ -v --tb=short
+        python -m pytest examples/algorithm/tests/ examples/statistics/tests/ -v --tb=short
 
     - name: Build with coverage
       run: |
@@ -108,7 +108,7 @@ jobs:
       run: |
         # Ensure the executable path is correct for tests
         export PYDCOV_EXECUTABLE="./build/pydcov"
-        python -m pytest tests/ -v --tb=short
+        python -m pytest examples/algorithm/tests/ examples/statistics/tests/ -v --tb=short
 
     - name: Generate coverage report
       run: |
@@ -163,7 +163,7 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m pytest tests/ -v
+        python -m pytest examples/algorithm/tests/ examples/statistics/tests/ -v
 
     - name: Generate coverage report
       run: |
@@ -218,11 +218,10 @@ jobs:
         cp PACKAGE_README.md dist/pydcov-package/PACKAGE_README.md
 
         # Copy example modules (for demonstration)
-        cp -r algorithm/ dist/pydcov-package/examples/
-        cp -r statistics/ dist/pydcov-package/examples/
+        cp -r examples/ dist/pydcov-package/
 
-        # Clean up test files and build artifacts from examples
-        find dist/pydcov-package/examples/ -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+        # Clean up build artifacts from examples (keep tests for reference)
+        find dist/pydcov-package/examples/ -name "build" -type d -exec rm -rf {} + 2>/dev/null || true
         find dist/pydcov-package/ -name "*.profraw" -delete
         find dist/pydcov-package/ -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
         find dist/pydcov-package/ -name "*.pyc" -delete

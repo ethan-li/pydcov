@@ -12,17 +12,22 @@ from pathlib import Path
 
 def get_project_root():
     """Get the project root directory."""
-    # This file is in statistics/tests/, so project root is two levels up
-    return Path(__file__).parent.parent.parent
+    # This file is in examples/statistics/tests/, so project root is three levels up
+    return Path(__file__).parent.parent.parent.parent
 
 
 def get_statistics_executable_path():
     """Get the path to the compiled statistics CLI executable."""
     project_root = get_project_root()
     
-    # Try different possible locations for the new modular structure
+    # Try different possible locations for the new examples structure
     possible_paths = [
-        # New modular structure paths
+        # New examples structure paths
+        project_root / "build" / "examples" / "statistics" / "app" / "statistics_cli",
+        project_root / "examples" / "statistics" / "app" / "statistics_cli",
+        project_root / "build" / "Debug" / "examples" / "statistics" / "app" / "statistics_cli",
+        project_root / "build" / "Release" / "examples" / "statistics" / "app" / "statistics_cli",
+        # Legacy modular structure paths
         project_root / "build" / "statistics" / "app" / "statistics_cli",
         project_root / "statistics" / "app" / "statistics_cli",
         project_root / "build" / "Debug" / "statistics" / "app" / "statistics_cli",

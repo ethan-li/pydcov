@@ -39,10 +39,10 @@ This package contains the PyDCov coverage tools and utilities for measuring C co
 
 ### Example Modules
 
-- **`examples/algorithm/`** - Dynamic array C library example
-- **`examples/statistics/`** - Statistical analysis C library example
+- **`examples/algorithm/`** - Dynamic array C library example with co-located tests
+- **`examples/statistics/`** - Statistical analysis C library example with co-located tests
 
-These example modules demonstrate how to use the coverage tools with real C projects.
+These example modules demonstrate how to use the coverage tools with real C projects. Each module includes its own test suite in a `tests/` subdirectory.
 
 ## Quick Start
 
@@ -53,13 +53,14 @@ These example modules demonstrate how to use the coverage tools with real C proj
 
 2. **Basic coverage workflow:**
    ```bash
-   python3 coverage_tools/scripts/coverage.py full tests/
+   python3 coverage_tools/scripts/coverage.py full examples/
    ```
 
 3. **Incremental coverage workflow:**
    ```bash
    python3 coverage_tools/scripts/incremental_coverage.py init
-   python3 coverage_tools/scripts/incremental_coverage.py add tests/
+   python3 coverage_tools/scripts/incremental_coverage.py add examples/algorithm/tests/
+   python3 coverage_tools/scripts/incremental_coverage.py add examples/statistics/tests/
    python3 coverage_tools/scripts/incremental_coverage.py report
    ```
 

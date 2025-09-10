@@ -9,10 +9,10 @@ import sys
 from pathlib import Path
 
 # Add the project root to the Python path
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tests.algorithm.algorithm_test_utils import CoverageContext, cleanup_coverage_files, get_executable_path
+from examples.algorithm.tests.algorithm_test_utils import CoverageContext, cleanup_coverage_files, get_executable_path
 
 
 def pytest_configure(config):

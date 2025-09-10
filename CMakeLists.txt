@@ -1,12 +1,13 @@
 # ==============================================================================
 # PyDCov - C Code Coverage for Python-Driven Tests
 # ==============================================================================
-# A focused sample project demonstrating how to measure code coverage for C code
-# that is executed via command-line interface from Python tests.
+# This CMakeLists.txt serves dual purposes:
+# 1. Demonstrates how to integrate the PyDCov coverage tools into a C/C++ project
+# 2. Builds the example modules for testing and demonstration
 #
-# This CMakeLists.txt contains the core build configuration. Coverage support
-# is provided through a separate module (cmake/coverage.cmake) that can be
-# optionally included.
+# Users can use this file as a template for integrating coverage tools into
+# their own projects. The core coverage functionality is provided through
+# cmake/coverage.cmake which can be included in any CMake project.
 #
 # Basic build:    cmake .. -DCMAKE_BUILD_TYPE=Release
 # With coverage:  cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
@@ -47,27 +48,27 @@ endif()
 include(cmake/coverage.cmake)
 
 # ==============================================================================
-# Module Configuration
+# Example Module Configuration
 # ==============================================================================
-# This project follows a modular architecture where each module contains:
+# The examples/ directory contains demonstration modules that show how to use
+# the PyDCov coverage tools with real C/C++ projects. Each module follows
+# a consistent architecture:
 # - src/: Core library implementation
 # - app/: Command-line interface application
+# - tests/: Module-specific test suite
 # - CMakeLists.txt: Module-specific build configuration
 #
-# Modules are designed to be:
-# - Self-contained with clear interfaces
-# - Reusable across different applications
-# - Independently testable and maintainable
-# - Following consistent naming conventions (pydcov::module_name)
+# These modules serve as both working examples and test subjects for the
+# coverage tools, demonstrating best practices for modular C/C++ development.
 # ==============================================================================
 
 # Add algorithm module (library + app)
-add_subdirectory(algorithm)
-add_subdirectory(algorithm/app)
+add_subdirectory(examples/algorithm)
+add_subdirectory(examples/algorithm/app)
 
 # Add statistics module (library + app)
-add_subdirectory(statistics)
-add_subdirectory(statistics/app)
+add_subdirectory(examples/statistics)
+add_subdirectory(examples/statistics/app)
 
 # Create an alias for the main executable to maintain backward compatibility
 add_executable(pydcov ALIAS algorithm_cli)

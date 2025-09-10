@@ -9,10 +9,10 @@ import sys
 from pathlib import Path
 
 # Add the project root to the Python path
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tests.statistics.statistics_test_utils import (
+from examples.statistics.tests.statistics_test_utils import (
     StatisticsCoverageContext,
     cleanup_coverage_files,
     get_statistics_executable_path,
