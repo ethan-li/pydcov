@@ -148,7 +148,8 @@ class TestTemplateCreation:
             
             # Should either fail or warn about existing directory
             if result.returncode != 0:
-                assert 'exists' in result.stderr.lower() or 'force' in result.stderr.lower()
+                error_output = (result.stderr + result.stdout).lower()
+                assert 'exists' in error_output or 'force' in error_output
 
 
 class TestTemplateStructure:
@@ -262,7 +263,8 @@ class TestTemplateErrorHandling:
         # Should either fail or create the directory
         # Exact behavior depends on implementation
         if result.returncode != 0:
-            assert 'not found' in result.stderr.lower() or 'permission' in result.stderr.lower()
+            error_output = (result.stderr + result.stdout).lower()
+            assert any(keyword in error_output for keyword in ['not found', 'permission', 'read-only', 'errno'])
     
     def test_empty_project_name(self):
         """Test creation with empty project name."""

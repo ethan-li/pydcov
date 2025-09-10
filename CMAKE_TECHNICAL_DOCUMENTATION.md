@@ -123,29 +123,29 @@ This section provides comprehensive technical analysis of every component in the
 ### Section 1: Project Declaration and Metadata (Lines 15-16)
 
 ```cmake
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.9.6)
 project(pydcov VERSION 1.0.0 LANGUAGES C CXX)
 ```
 
 #### Technical Analysis
 
 **CMake Version Requirement (cmake_minimum_required)**
-- **Version 3.15 Selection**: This version was chosen as the minimum requirement for several technical reasons:
-  - **Modern CMake Features**: Provides access to modern target-based commands and generator expressions
+- **Version 3.9.6 Selection**: This version was chosen as the minimum requirement for several technical reasons:
+  - **Broad Compatibility**: Ensures compatibility with older systems and CI environments
+  - **Essential Features**: Provides all necessary features for target-based commands and generator expressions
   - **Policy Consistency**: Ensures consistent behavior across different CMake installations
-  - **Broad Compatibility**: Widely available on most systems while avoiding legacy limitations
-  - **Feature Availability**: Supports all features used in this project without requiring cutting-edge versions
+  - **Legacy Support**: Supports systems with older CMake installations while maintaining functionality
 
 **Alternative Approaches and Trade-offs:**
 ```cmake
-# Too restrictive - limits compatibility
+# Too restrictive - limits compatibility with older systems
 cmake_minimum_required(VERSION 3.20)
 
 # Too permissive - may cause policy warnings or missing features
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 
-# Current choice - balanced approach
-cmake_minimum_required(VERSION 3.15)
+# Current choice - balanced approach for broad compatibility
+cmake_minimum_required(VERSION 3.9.6)
 ```
 
 **Project Declaration (project)**

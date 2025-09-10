@@ -2,6 +2,12 @@
 
 A C++ project with PyDCov coverage support.
 
+## Requirements
+
+- CMake 3.9.6 or later
+- C++17 compatible compiler (GCC, Clang, or MSVC)
+- Make or Ninja build system
+
 ## Building
 
 ```bash

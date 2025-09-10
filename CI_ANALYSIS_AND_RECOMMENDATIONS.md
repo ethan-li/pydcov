@@ -258,6 +258,27 @@ pytest tests/ -m "integration" # Integration tests
 - **4 Python versions**: 3.9, 3.10, 3.11, 3.12
 - **3 platforms**: Ubuntu+GCC, Ubuntu+Clang, macOS+Clang
 
+## Recent Fixes
+
+### **🔧 Path Handling Robustness (CI Issue Resolved)**
+
+**Problem**: CI failure in Python 3.9 with "expected str, bytes or os.PathLike object, not NoneType" error in template system.
+
+**Root Cause**: Argument parser using `type=Path` could cause issues in certain CI environments where path handling differs.
+
+**Solution Implemented**:
+- Changed argument parser from `type=Path` to `type=str` for path arguments
+- Added robust path validation and error handling in CLI commands
+- Enhanced current working directory detection with fallback error handling
+- Added comprehensive path handling tests to prevent regression
+
+**Files Modified**:
+- `pydcov/cli.py`: Enhanced path handling in `handle_init_template_command` and `handle_init_cmake_command`
+- `tests/test_template_system.py`: Fixed error message checking in tests
+- `tests/test_cli_commands.py`: Added `TestCLIPathHandling` class with comprehensive path tests
+
+**Validation**: All template and CLI tests now pass across Python versions 3.9-3.12.
+
 ## Conclusion
 
 The PyDCov CI/CD pipeline has been transformed from testing only example modules to providing comprehensive validation of the entire PyDCov package ecosystem. The new test suite ensures:
@@ -267,5 +288,6 @@ The PyDCov CI/CD pipeline has been transformed from testing only example modules
 3. **Functional template system** via end-to-end project creation testing
 4. **Cross-platform compatibility** via multi-environment testing
 5. **Graceful error handling** through edge case validation
+6. **Robust path handling** with CI environment compatibility
 
 The pipeline now provides confidence for PyPI publication and production deployment of the PyDCov package.

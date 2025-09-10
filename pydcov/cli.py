@@ -138,7 +138,7 @@ def create_init_cmake_parser(subparsers):
 
     init_parser.add_argument(
         '--project-root',
-        type=Path,
+        type=str,
         help='Project root directory (current directory if not specified)'
     )
 
@@ -173,7 +173,7 @@ def create_init_template_parser(subparsers):
 
     template_parser.add_argument(
         '--output-dir',
-        type=Path,
+        type=str,
         help='Output directory (current directory if not specified)'
     )
 
@@ -288,7 +288,24 @@ def handle_init_template_command(args) -> int:
         import importlib.resources
         import re
 
-        output_dir = args.output_dir or Path.cwd()
+        # Handle output directory with robust path resolution
+        if args.output_dir is not None:
+            output_dir = Path(args.output_dir)
+        else:
+            try:
+                output_dir = Path.cwd()
+            except (OSError, RuntimeError) as e:
+                print(f"Error: Cannot determine current working directory: {e}")
+                return 1
+
+        # Ensure output_dir is a valid Path object
+        if not isinstance(output_dir, Path):
+            try:
+                output_dir = Path(output_dir)
+            except (TypeError, ValueError) as e:
+                print(f"Error: Invalid output directory: {e}")
+                return 1
+
         project_dir = output_dir / args.project_name
 
         # Check if project directory already exists
@@ -379,7 +396,24 @@ def handle_init_cmake_command(args) -> int:
         import shutil
         import importlib.resources
 
-        project_root = args.project_root or Path.cwd()
+        # Handle project root with robust path resolution
+        if args.project_root is not None:
+            project_root = Path(args.project_root)
+        else:
+            try:
+                project_root = Path.cwd()
+            except (OSError, RuntimeError) as e:
+                print(f"Error: Cannot determine current working directory: {e}")
+                return 1
+
+        # Ensure project_root is a valid Path object
+        if not isinstance(project_root, Path):
+            try:
+                project_root = Path(project_root)
+            except (TypeError, ValueError) as e:
+                print(f"Error: Invalid project root: {e}")
+                return 1
+
         cmake_dir = project_root / "cmake"
 
         # Create cmake directory if it doesn't exist

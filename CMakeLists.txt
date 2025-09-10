@@ -13,7 +13,7 @@
 # With coverage:  cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
 # ==============================================================================
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.9.6)
 project(pydcov VERSION 1.0.0 LANGUAGES C CXX)
 
 # ==============================================================================

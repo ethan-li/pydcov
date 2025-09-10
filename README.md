@@ -128,7 +128,7 @@ incremental.report()
 ### Required Tools
 
 **Build Tools:**
-- CMake 3.10 or later
+- CMake 3.9.6 or later
 - Make or Ninja
 - GCC or Clang compiler
 
@@ -170,7 +170,7 @@ PyDCov provides a comprehensive CMake module that automatically:
 ### Example CMakeLists.txt
 
 ```cmake
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.9.6)
 project(MyProject)
 
 # Include PyDCov coverage support

@@ -209,7 +209,7 @@ class TestIncrementalStatusCommand:
 
 class TestCLIVerboseMode:
     """Test CLI verbose mode functionality."""
-    
+
     def test_coverage_verbose(self):
         """Test coverage command with verbose flag."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -217,11 +217,11 @@ class TestCLIVerboseMode:
                 ['pydcov', 'coverage', 'status', '--verbose', '--project-root', temp_dir],
                 capture_output=True, text=True
             )
-            
+
             # Verbose mode should provide more output
             # Exact content depends on implementation
             assert len(result.stdout) > 0 or len(result.stderr) > 0
-    
+
     def test_incremental_verbose(self):
         """Test incremental command with verbose flag."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -229,9 +229,78 @@ class TestCLIVerboseMode:
                 ['pydcov', 'incremental', 'status', '--verbose', '--project-root', temp_dir],
                 capture_output=True, text=True
             )
-            
+
             # Verbose mode should provide more output
             assert len(result.stdout) > 0 or len(result.stderr) > 0
+
+
+class TestCLIPathHandling:
+    """Test CLI path handling robustness."""
+
+    def test_init_template_without_output_dir(self):
+        """Test init-template command without specifying output directory."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Change to temp directory to test current directory handling
+            import os
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(temp_dir)
+
+                result = subprocess.run([
+                    'pydcov', 'init-template', 'path_test_project',
+                    '--template', 'basic_cpp'
+                ], capture_output=True, text=True)
+
+                assert result.returncode == 0, f"Command failed: {result.stdout} {result.stderr}"
+                assert 'Created new project' in result.stdout
+
+                # Check that project was created in current directory
+                project_path = Path(temp_dir) / 'path_test_project'
+                assert project_path.exists()
+                assert (project_path / 'CMakeLists.txt').exists()
+
+            finally:
+                os.chdir(original_cwd)
+
+    def test_init_cmake_without_project_root(self):
+        """Test init-cmake command without specifying project root."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            import os
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(temp_dir)
+
+                result = subprocess.run([
+                    'pydcov', 'init-cmake'
+                ], capture_output=True, text=True)
+
+                assert result.returncode == 0, f"Command failed: {result.stdout} {result.stderr}"
+                assert 'Copied coverage.cmake' in result.stdout
+
+                # Check that cmake files were created in current directory
+                cmake_dir = Path(temp_dir) / 'cmake'
+                assert cmake_dir.exists()
+                assert (cmake_dir / 'coverage.cmake').exists()
+
+            finally:
+                os.chdir(original_cwd)
+
+    def test_path_handling_with_none_values(self):
+        """Test that path handling gracefully handles None values."""
+        # This test simulates the CI environment issue where paths might be None
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Test with explicit output directory to ensure robustness
+            result = subprocess.run([
+                'pydcov', 'init-template', 'none_test_project',
+                '--template', 'basic_cpp',
+                '--output-dir', temp_dir
+            ], capture_output=True, text=True)
+
+            assert result.returncode == 0, f"Command failed: {result.stdout} {result.stderr}"
+
+            project_path = Path(temp_dir) / 'none_test_project'
+            assert project_path.exists()
+            assert (project_path / 'CMakeLists.txt').exists()
 
 
 if __name__ == '__main__':
