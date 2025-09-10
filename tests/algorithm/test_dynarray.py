@@ -4,7 +4,7 @@ Test suite for dynamic array operations in the C algorithm library.
 """
 
 import pytest
-from tests.test_utils import run_command, assert_command_success, assert_command_failure
+from tests.algorithm.algorithm_test_utils import run_command, assert_command_success, assert_command_failure
 
 
 class TestDynamicArrayOperations:

@@ -9,10 +9,10 @@ import sys
 from pathlib import Path
 
 # Add the project root to the Python path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tests.test_utils import CoverageContext, cleanup_coverage_files, get_executable_path
+from tests.algorithm.algorithm_test_utils import CoverageContext, cleanup_coverage_files, get_executable_path
 
 
 def pytest_configure(config):
@@ -68,21 +68,7 @@ def coverage_class():
         yield ctx
 
 
-# Pytest command line options
-def pytest_addoption(parser):
-    """Add custom command line options."""
-    parser.addoption(
-        "--coverage-build",
-        action="store_true",
-        default=False,
-        help="Run tests assuming coverage build was used"
-    )
-    parser.addoption(
-        "--executable-path",
-        action="store",
-        default=None,
-        help="Path to the pydcov executable"
-    )
+# Pytest command line options are defined in the root conftest.py
 
 
 @pytest.fixture(scope="session")

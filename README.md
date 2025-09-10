@@ -18,28 +18,56 @@ A focused sample project demonstrating how to measure code coverage for C code t
 
 ```
 pydcov/
-├── src/                    # C source code
-│   ├── algorithm.h         # Header file with dynamic array declarations
-│   ├── algorithm.c         # C90-compliant dynamic array implementation (70 lines)
-│   └── main.cpp            # C++ command-line wrapper (237 lines)
-├── tests/                  # Python test suite
-│   ├── conftest.py         # Pytest configuration and fixtures (135 lines)
-│   ├── test_utils.py       # Test utilities and helpers (156 lines)
-│   └── test_dynarray.py    # Dynamic array tests - 16 test cases (251 lines)
-├── scripts/                # Build and coverage scripts
+├── coverage_tools/         # Main Python coverage tools package (DELIVERABLE)
+│   ├── core/              # Core coverage management utilities
+│   ├── scripts/           # Command-line coverage tools
+│   ├── utils/             # Utility modules and helpers
+│   └── requirements.txt   # Python dependencies for coverage tools
+├── cmake/                  # CMake coverage utilities (DELIVERABLE)
+│   ├── coverage.cmake     # Coverage configuration module
+│   └── COVERAGE_USAGE.md  # CMake integration documentation
+├── docs/                   # Documentation (DELIVERABLE)
+│   ├── INCREMENTAL_COVERAGE.md
+│   └── MODULE_COVERAGE.md
+├── scripts/                # Build and deployment scripts (DELIVERABLE)
 │   ├── install_deps.sh     # Dependency installation script
-│   ├── install_deps.sh     # Dependency installation script (290 lines)
-│   ├── test_coverage_fix.sh # Coverage verification script (217 lines)
-│   └── verify_deployment.sh # Pre-deployment verification (271 lines)
+│   ├── test_coverage_fix.sh # Coverage verification script
+│   └── verify_deployment.sh # Pre-deployment verification
+├── tests/                  # Unified test suite
+│   ├── algorithm/         # Tests for algorithm example module
+│   ├── statistics/        # Tests for statistics example module
+│   ├── coverage_tools/    # Tests for coverage tools (future)
+│   └── conftest.py        # Root pytest configuration
+├── algorithm/              # Example C library module
+│   ├── src/               # Algorithm library source code
+│   ├── app/               # Algorithm CLI application
+│   └── CMakeLists.txt     # Module build configuration
+├── statistics/             # Example C library module
+│   ├── src/               # Statistics library source code
+│   ├── app/               # Statistics CLI application
+│   └── CMakeLists.txt     # Module build configuration
 ├── .github/workflows/      # CI/CD configuration
-│   └── ci.yml              # GitHub Actions workflow (217 lines)
-├── CMakeLists.txt          # CMake build configuration (138 lines)
-├── requirements.txt        # Python dependencies (5 lines)
-├── EXAMPLES.md             # Detailed usage examples (251 lines)
+│   └── ci.yml              # GitHub Actions workflow with artifact packaging
+├── CMakeLists.txt          # Root CMake build configuration
+├── requirements.txt        # Python dependencies
+├── pytest.ini             # Pytest configuration
+├── EXAMPLES.md             # Detailed usage examples
+├── PACKAGE_README.md       # Package distribution documentation
 └── LICENSE                 # MIT license
 ```
 
-**Total Project Size**: ~2,900 lines across 16 files
+### Deliverable vs Example Components
+
+**Deliverable Components** (packaged in CI artifacts):
+- `coverage_tools/` - The core Python coverage tools
+- `cmake/` - CMake integration utilities
+- `docs/` - Documentation
+- `scripts/` - Build and deployment scripts
+- Root configuration files
+
+**Example/Demo Components** (for testing and demonstration):
+- `algorithm/` and `statistics/` - Example C library modules
+- `tests/` - Test suite for all components
 
 ## Quick Start
 
@@ -323,11 +351,17 @@ The project includes a comprehensive test suite with **16 test cases** covering 
 # Run all tests
 python3 -m pytest tests/ -v
 
-# Run specific test file
-python3 -m pytest tests/test_dynarray.py -v
+# Run tests for specific modules
+python3 -m pytest tests/algorithm/ -v    # Algorithm module tests
+python3 -m pytest tests/statistics/ -v   # Statistics module tests
+
+# Run tests with specific markers
+python3 -m pytest tests/ -m "algorithm" -v
+python3 -m pytest tests/ -m "statistics" -v
+python3 -m pytest tests/ -m "not slow" -v
 
 # Run with coverage (Python-level)
-python3 -m pytest tests/ --cov=tests --cov-report=html
+python3 -m pytest tests/ --cov=coverage_tools --cov-report=html
 
 # Run in parallel
 python3 -m pytest tests/ -n auto

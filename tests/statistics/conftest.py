@@ -8,11 +8,11 @@ import os
 import sys
 from pathlib import Path
 
-# Add the current directory to the Python path for local imports
-current_dir = Path(__file__).parent
-sys.path.insert(0, str(current_dir))
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-from test_utils import (
+from tests.statistics.statistics_test_utils import (
     StatisticsCoverageContext,
     cleanup_coverage_files,
     get_statistics_executable_path,
@@ -81,21 +81,7 @@ def statistics_coverage_class():
         yield ctx
 
 
-# Pytest command line options
-def pytest_addoption(parser):
-    """Add custom command line options."""
-    parser.addoption(
-        "--coverage-build",
-        action="store_true",
-        default=False,
-        help="Run tests assuming coverage build was used"
-    )
-    parser.addoption(
-        "--statistics-executable-path",
-        action="store",
-        default=None,
-        help="Path to the statistics_cli executable"
-    )
+# Pytest command line options are defined in the root conftest.py
 
 
 @pytest.fixture(scope="session")

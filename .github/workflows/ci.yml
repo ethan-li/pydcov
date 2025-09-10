@@ -178,40 +178,89 @@ jobs:
         publish_dir: build/coverage/html
         destination_dir: coverage
 
+  package:
+    name: Package Deliverable Files
+    runs-on: ubuntu-latest
+    needs: [test, build-docs]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r coverage_tools/requirements.txt
+
+    - name: Create deliverable package
+      run: |
+        mkdir -p dist/pydcov-package/examples
+
+        # Copy core deliverable files
+        cp -r coverage_tools/ dist/pydcov-package/
+        cp -r cmake/ dist/pydcov-package/
+        cp -r docs/ dist/pydcov-package/
+        cp -r scripts/ dist/pydcov-package/
+
+        # Copy root configuration files
+        cp CMakeLists.txt dist/pydcov-package/
+        cp README.md dist/pydcov-package/
+        cp LICENSE dist/pydcov-package/
+        cp requirements.txt dist/pydcov-package/
+        cp pytest.ini dist/pydcov-package/
+        cp EXAMPLES.md dist/pydcov-package/
+        cp CMAKE_TECHNICAL_DOCUMENTATION.md dist/pydcov-package/
+        cp PACKAGE_README.md dist/pydcov-package/PACKAGE_README.md
+
+        # Copy example modules (for demonstration)
+        cp -r algorithm/ dist/pydcov-package/examples/
+        cp -r statistics/ dist/pydcov-package/examples/
+
+        # Clean up test files and build artifacts from examples
+        find dist/pydcov-package/examples/ -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+        find dist/pydcov-package/ -name "*.profraw" -delete
+        find dist/pydcov-package/ -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+        find dist/pydcov-package/ -name "*.pyc" -delete
+
+    - name: Create package archive
+      run: |
+        cd dist
+        tar -czf pydcov-package.tar.gz pydcov-package/
+        zip -r pydcov-package.zip pydcov-package/
+
+    - name: Upload deliverable package
+      uses: actions/upload-artifact@v4
+      with:
+        name: pydcov-deliverable-package
+        path: |
+          dist/pydcov-package.tar.gz
+          dist/pydcov-package.zip
+        retention-days: 30
+
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [test, build-docs]
+    needs: [test, build-docs, package]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up build environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential gcc g++ cmake
-
-    - name: Build release binaries
-      run: |
-        mkdir -p build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        make
-        mkdir -p ../dist
-        cp pydcov ../dist/pydcov-linux-x64
-        strip ../dist/pydcov-linux-x64
-
-    - name: Create release archive
-      run: |
-        cd dist
-        tar -czf pydcov-linux-x64.tar.gz pydcov-linux-x64
-        cd ..
+    - name: Download deliverable package
+      uses: actions/download-artifact@v4
+      with:
+        name: pydcov-deliverable-package
+        path: dist/
 
     - name: Upload release artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: release-binaries
+        name: release-package
         path: dist/
-        retention-days: 30
+        retention-days: 90
