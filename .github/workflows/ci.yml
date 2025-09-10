@@ -133,55 +133,10 @@ jobs:
           !build/coverage/*.profraw
         retention-days: 7
 
-  build-docs:
-    name: Build Documentation
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential gcc g++ cmake lcov
-        python -m pip install --upgrade pip
-        pip install pytest pytest-cov pytest-xdist pytest-html coverage
-
-    - name: Build project with coverage
-      run: |
-        mkdir -p build
-        cd build
-        CC=gcc CXX=g++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
-        make
-
-    - name: Run tests
-      run: |
-        python -m pytest examples/algorithm/tests/ examples/statistics/tests/ -v
-
-    - name: Generate coverage report
-      run: |
-        cd build
-        make coverage-report
-
-    - name: Deploy coverage report to GitHub Pages
-      if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: build/coverage/html
-        destination_dir: coverage
-
   package:
     name: Package Deliverable Files
     runs-on: ubuntu-latest
-    needs: [test, build-docs]
+    needs: test
 
     steps:
     - name: Checkout code
@@ -244,7 +199,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [test, build-docs, package]
+    needs: [test, package]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
