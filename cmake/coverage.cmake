@@ -129,7 +129,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COVERAGE_FLAGS}")
 
 function(target_link_coverage_libraries target_name)
     if(COVERAGE_LIBS)
-        target_link_libraries(${target_name} ${COVERAGE_LIBS})
+        target_link_libraries(${target_name} PRIVATE ${COVERAGE_LIBS})
         message(STATUS "Linked coverage libraries to ${target_name}: ${COVERAGE_LIBS}")
     endif()
 
