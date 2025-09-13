@@ -179,16 +179,21 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
     # Add current coverage data to incremental collection
     add_custom_target(coverage-incremental-add
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Adding current coverage data to incremental collection..."
-        COMMAND ${CMAKE_COMMAND} -E echo "Current coverage data added to incremental collection"
-        COMMENT "Adding current GCC coverage data to incremental collection"
+        COMMAND ${CMAKE_COMMAND} -E echo "Collecting all coverage files from build directory..."
+        # Use external script to collect coverage files
+        COMMAND bash ${CMAKE_SOURCE_DIR}/cmake/collect_coverage_files.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/coverage/incremental
+        COMMAND ${CMAKE_COMMAND} -E echo "Coverage files collected successfully"
+        COMMAND find ${CMAKE_BINARY_DIR}/coverage/incremental -name "*.gcda" -o -name "*.gcno" | wc -l | xargs -I {} echo "Total files collected: {}"
+        COMMENT "Collecting all generated GCC coverage files"
     )
 
     # Merge all incremental coverage data
     add_custom_target(coverage-incremental-merge
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
         COMMAND ${CMAKE_COMMAND} -E echo "Merging incremental coverage data..."
-        COMMAND ${CMAKE_COMMAND} -E echo "Incremental coverage data merged successfully"
+        # For GCC, generate coverage info from collected files
+        COMMAND lcov --capture --directory ${CMAKE_BINARY_DIR}/coverage/incremental --output-file ${CMAKE_BINARY_DIR}/coverage/incremental_merged.info --rc branch_coverage=1 --ignore-errors gcov,source,unused || echo "No gcda files to merge"
+        COMMAND ${CMAKE_COMMAND} -E echo "GCC coverage data merged successfully"
         COMMENT "Merging all incremental GCC coverage data"
         DEPENDS coverage-incremental-add
     )
@@ -250,9 +255,29 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
 # ==============================================================================
 
 elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    # Find LLVM tools (they might be versioned on Ubuntu)
-    find_program(LLVM_PROFDATA_EXECUTABLE NAMES llvm-profdata llvm-profdata-18 llvm-profdata-17 llvm-profdata-16 llvm-profdata-15 llvm-profdata-14)
-    find_program(LLVM_COV_EXECUTABLE NAMES llvm-cov llvm-cov-18 llvm-cov-17 llvm-cov-16 llvm-cov-15 llvm-cov-14)
+    # Find LLVM tools (they might be versioned on Ubuntu, or accessed via xcrun on macOS)
+    if(APPLE)
+        # On macOS, try xcrun first
+        find_program(XCRUN_EXECUTABLE xcrun)
+        if(XCRUN_EXECUTABLE)
+            execute_process(COMMAND ${XCRUN_EXECUTABLE} --find llvm-profdata
+                          OUTPUT_VARIABLE LLVM_PROFDATA_EXECUTABLE
+                          OUTPUT_STRIP_TRAILING_WHITESPACE
+                          ERROR_QUIET)
+            execute_process(COMMAND ${XCRUN_EXECUTABLE} --find llvm-cov
+                          OUTPUT_VARIABLE LLVM_COV_EXECUTABLE
+                          OUTPUT_STRIP_TRAILING_WHITESPACE
+                          ERROR_QUIET)
+        endif()
+    endif()
+
+    # If not found via xcrun or not on macOS, try standard search
+    if(NOT LLVM_PROFDATA_EXECUTABLE)
+        find_program(LLVM_PROFDATA_EXECUTABLE NAMES llvm-profdata llvm-profdata-18 llvm-profdata-17 llvm-profdata-16 llvm-profdata-15 llvm-profdata-14)
+    endif()
+    if(NOT LLVM_COV_EXECUTABLE)
+        find_program(LLVM_COV_EXECUTABLE NAMES llvm-cov llvm-cov-18 llvm-cov-17 llvm-cov-16 llvm-cov-15 llvm-cov-14)
+    endif()
 
     if(NOT LLVM_PROFDATA_EXECUTABLE)
         message(FATAL_ERROR "llvm-profdata not found. Please install LLVM tools.")
@@ -287,16 +312,21 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
     # Add current coverage data to incremental collection
     add_custom_target(coverage-incremental-add
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Adding current coverage data to incremental collection..."
-        COMMAND ${CMAKE_COMMAND} -E echo "Current coverage data added to incremental collection"
-        COMMENT "Adding current Clang coverage data to incremental collection"
+        COMMAND ${CMAKE_COMMAND} -E echo "Collecting all coverage files from build directory..."
+        # Use external script to collect coverage files
+        COMMAND bash ${CMAKE_SOURCE_DIR}/cmake/collect_coverage_files.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/coverage/incremental
+        COMMAND ${CMAKE_COMMAND} -E echo "Coverage files collected successfully"
+        COMMAND find ${CMAKE_BINARY_DIR}/coverage/incremental -name "*.profraw" | wc -l | xargs -I {} echo "Total files collected: {}"
+        COMMENT "Collecting all generated Clang coverage files"
     )
 
     # Merge all incremental coverage data
     add_custom_target(coverage-incremental-merge
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
         COMMAND ${CMAKE_COMMAND} -E echo "Merging incremental coverage data..."
-        COMMAND ${CMAKE_COMMAND} -E echo "Incremental coverage data merged successfully"
+        # Merge profraw files using llvm-profdata
+        COMMAND ${LLVM_PROFDATA_EXECUTABLE} merge -sparse ${CMAKE_BINARY_DIR}/coverage/incremental/*.profraw -o ${CMAKE_BINARY_DIR}/coverage/incremental_merged.profdata || echo "No profraw files to merge"
+        COMMAND ${CMAKE_COMMAND} -E echo "Clang coverage data merged successfully"
         COMMENT "Merging all incremental Clang coverage data"
         DEPENDS coverage-incremental-add
     )

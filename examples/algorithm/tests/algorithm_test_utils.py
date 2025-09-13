@@ -140,11 +140,19 @@ def assert_command_failure(args):
 
 def setup_coverage_environment():
     """Set up environment variables for coverage collection."""
-    # For Clang coverage
-    os.environ['LLVM_PROFILE_FILE'] = str(get_project_root() / "build" / "coverage-%p.profraw")
-    
+    # For Clang coverage - ensure coverage directory exists
+    project_root = get_project_root()
+    coverage_dir = project_root / "build" / "coverage"
+    coverage_dir.mkdir(parents=True, exist_ok=True)
+
+    # Set LLVM_PROFILE_FILE to generate unique files per process
+    # Using %p (process ID) and %m (module signature) for uniqueness
+    os.environ['LLVM_PROFILE_FILE'] = str(coverage_dir / "coverage-%p-%m.profraw")
+
     # For GCC coverage (gcov looks for .gcda files in the same directory as .gcno files)
     # No special environment setup needed for GCC
+
+    print(f"Coverage environment set up. Files will be written to: {coverage_dir}")
 
 
 def cleanup_coverage_files():

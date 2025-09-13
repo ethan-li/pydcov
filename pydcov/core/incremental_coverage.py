@@ -80,7 +80,7 @@ class IncrementalCoverageManager:
         Returns:
             True if successful, False otherwise
         """
-        self.logger.step("Running tests and adding coverage data...")
+        self.logger.step("Running tests and collecting coverage data...")
 
         # Parse and prepare test command
         if isinstance(test_command, list):
@@ -100,7 +100,7 @@ class IncrementalCoverageManager:
         if compiler == 'clang':
             # Set LLVM_PROFILE_FILE for Clang coverage
             coverage_dir = self.path_manager.ensure_coverage_dir()
-            env['LLVM_PROFILE_FILE'] = str(coverage_dir / 'coverage-%p.profraw')
+            env['LLVM_PROFILE_FILE'] = str(coverage_dir / 'coverage-%p-%m.profraw')
             self.logger.info(f"Using Clang coverage with LLVM_PROFILE_FILE={env['LLVM_PROFILE_FILE']}")
 
         # Execute test command using TestExecutor
@@ -110,15 +110,31 @@ class IncrementalCoverageManager:
             timeout=600
         ):
             return False
-        
-        # Add coverage data to incremental collection
+
+        # Collect all coverage files generated during testing
         if not self.cmake_helper.run_incremental_add():
-            self.logger.error("Failed to add coverage data to incremental collection")
+            self.logger.error("Failed to collect coverage data")
             return False
-        
-        # Copy coverage files to incremental directory
-        return self._copy_coverage_files()
-    
+
+        # Show collection results
+        self._show_collection_status()
+        return True
+
+    def _show_collection_status(self) -> None:
+        """Show status of collected coverage files."""
+        incremental_dir = self.path_manager.ensure_incremental_dir()
+
+        profraw_files = list(incremental_dir.glob('*.profraw'))
+        gcda_files = list(incremental_dir.glob('*.gcda'))
+
+        if profraw_files:
+            self.logger.info(f"Collected {len(profraw_files)} Clang coverage files")
+        if gcda_files:
+            self.logger.info(f"Collected {len(gcda_files)} GCC coverage files")
+
+        if not profraw_files and not gcda_files:
+            self.logger.warning("No coverage files were collected")
+
     def _copy_coverage_files(self) -> bool:
         """Copy coverage files to incremental directory."""
         compiler = self.compiler_detector.detect_compiler()
