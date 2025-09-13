@@ -1,33 +1,45 @@
-# Generic Coverage System Usage Guide
+# Build-Only Coverage System Usage Guide
+
+> **✅ MIGRATION COMPLETE**: CMake coverage targets have been removed in favor of PyDCov's pure Python implementation.
+>
+> **Use PyDCov Commands**:
+> - `pydcov coverage clean` (replaces make coverage-clean)
+> - `pydcov coverage report` (replaces make coverage-report)
+> - `pydcov coverage full "test_cmd"` (complete workflow)
+>
+> The Python implementation provides better error handling, cross-platform compatibility, and automatic executable detection.
 
 ## Overview
 
-The refactored `coverage.cmake` module provides a completely generic and reusable code coverage system for C/C++ projects. It automatically detects executable targets and generates coverage reports without requiring hardcoded module names or directory structures.
+The `coverage.cmake` module now provides build configuration only for C/C++ projects with coverage support. Coverage file operations have been moved to PyDCov's pure Python implementation.
+
+**Note**: CMake coverage targets have been removed. Use PyDCov commands for coverage operations.
 
 ## Key Features
 
-### ✅ **Automatic Executable Detection**
-- Automatically finds all executable targets in your project
-- Excludes test executables (patterns: test, tests, testing, gtest, catch, benchmark)
-- No manual configuration required for most projects
+### ✅ **Build Configuration**
+- Sets up compiler flags for coverage instrumentation
+- Configures coverage libraries for linking
+- Creates coverage output directory structure
 
-### ✅ **Manual Registration Support**
-- Explicit control over which executables to include in coverage
-- Useful for complex projects with specific requirements
+### ✅ **Executable Registration (Compatibility)**
+- Preserves coverage_add_executable() for legacy code
+- Automatic executable detection (for compatibility)
+- No longer used by Python tools (automatic detection instead)
 
 ### ✅ **Cross-Compiler Support**
 - GCC/gcov toolchain support
 - Clang/llvm-cov toolchain support
-- Automatic tool detection and configuration
+- Automatic compiler detection and flag configuration
 
-### ✅ **Multiple Output Formats**
-- HTML reports for interactive viewing
-- LCOV format for CI/CD integration
-- Comprehensive coverage metrics
+### ✅ **Python Integration**
+- Seamless integration with PyDCov commands
+- Automatic PyDCov detection and status reporting
+- Migration guidance and compatibility warnings
 
 ## Usage Examples
 
-### 1. Basic Usage (Auto-Detection)
+### 1. Basic Build Configuration
 
 ```cmake
 # In your root CMakeLists.txt
@@ -37,10 +49,10 @@ include(cmake/coverage.cmake)
 add_executable(my_app src/main.cpp)
 add_executable(my_tool src/tool.cpp)
 
-# Coverage will automatically detect and include both executables
+# Coverage flags are automatically applied when ENABLE_COVERAGE=ON
 ```
 
-### 2. Manual Registration
+### 2. Legacy Executable Registration (Optional)
 
 ```cmake
 # Include coverage system
@@ -49,15 +61,13 @@ include(cmake/coverage.cmake)
 # Build executables
 add_executable(my_app src/main.cpp)
 add_executable(my_tool src/tool.cpp)
-add_executable(my_test src/test.cpp)  # This would be auto-excluded
 
-# Manually register specific executables for coverage
+# Optional: Register executables for compatibility (not used by Python tools)
 coverage_add_executable(my_app)
 coverage_add_executable(my_tool)
-# my_test is intentionally excluded
 ```
 
-### 3. Automatic Registration via target_link_coverage_libraries
+### 3. Coverage Library Linking
 
 ```cmake
 # Include coverage system
@@ -66,11 +76,11 @@ include(cmake/coverage.cmake)
 # Build executable
 add_executable(my_app src/main.cpp)
 
-# Link coverage libraries (also auto-registers for coverage)
+# Link coverage libraries (for GCC projects)
 target_link_coverage_libraries(my_app)
 ```
 
-## Build Commands
+## Build and Coverage Workflow
 
 ```bash
 # Configure with coverage enabled
@@ -79,15 +89,13 @@ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
 # Build the project
 make
 
-# Run your executables to generate coverage data
-LLVM_PROFILE_FILE="coverage-%p.profraw" ./my_app
-LLVM_PROFILE_FILE="coverage-%p.profraw" ./my_tool
+# Use PyDCov for coverage operations
+pydcov coverage clean                    # Clean coverage data
+pydcov coverage test "make test"         # Run tests with coverage
+pydcov coverage report                   # Generate coverage reports
 
-# Generate coverage reports
-make coverage-report
-
-# Clean coverage data (optional)
-make coverage-clean
+# Or use the complete workflow
+pydcov coverage full "make test"         # Clean, build, test, and report
 ```
 
 ## Output Files
@@ -96,65 +104,56 @@ make coverage-clean
 - `build/coverage/coverage.info` - LCOV format for CI/CD tools
 - `build/coverage/coverage.profdata` - Raw coverage data (Clang only)
 
-## Migration from Hardcoded Systems
+## Migration from CMake Targets
 
-### Before (Hardcoded)
-```cmake
-# Old hardcoded approach
-add_custom_target(coverage-report
-    COMMAND llvm-cov show algorithm_cli statistics_cli ...
-    DEPENDS algorithm_cli statistics_cli
-)
+### Before (CMake Targets)
+```bash
+# Old CMake approach
+make coverage-clean
+make coverage-report
 ```
 
-### After (Generic)
-```cmake
-# New generic approach
-include(cmake/coverage.cmake)
-# Everything else is automatic!
+### After (PyDCov Commands)
+```bash
+# New PyDCov approach
+pydcov coverage clean
+pydcov coverage report
+# Automatic executable detection included!
 ```
 
 ## Advanced Configuration
 
-### Custom Executable Detection
+### Custom Build Configuration
 ```cmake
-# Disable auto-detection and use manual registration only
-function(coverage_auto_detect_executables)
-    # Override with empty implementation
-endfunction()
-
-# Then manually register
-coverage_add_executable(my_specific_app)
+# Custom compiler flags (if needed)
+if(ENABLE_COVERAGE)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -fprofile-arcs -ftest-coverage")
+    elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    endif()
+endif()
 ```
 
-### Custom Test Exclusion Patterns
+### Legacy Executable Registration (Compatibility)
 ```cmake
-# Modify the auto-detection function to use custom patterns
-function(coverage_auto_detect_executables)
-    get_property(all_targets DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
-    
-    foreach(target ${all_targets})
-        if(TARGET ${target})
-            get_target_property(target_type ${target} TYPE)
-            if(target_type STREQUAL "EXECUTABLE")
-                string(TOLOWER ${target} target_lower)
-                # Custom exclusion patterns
-                if(NOT target_lower MATCHES "(test|spec|mock|stub)")
-                    coverage_add_executable(${target})
-                endif()
-            endif()
-        endif()
-    endforeach()
-endfunction()
+# For compatibility with legacy code that expects executable registration
+include(cmake/coverage.cmake)
+
+# Manual registration (not used by Python tools)
+coverage_add_executable(my_specific_app)
 ```
 
 ## Troubleshooting
 
-### No Executables Found
+### PyDCov Not Found
 ```
-Warning: No executables registered for coverage
+Warning: PyDCov: NOT INSTALLED
 ```
-**Solution**: Ensure your executables are built before coverage configuration, or manually register them.
+**Solution**: Install PyDCov:
+```bash
+pip install pydcov
+```
 
 ### LLVM Tools Not Found
 ```
@@ -165,13 +164,19 @@ Error: llvm-profdata not found
 export PATH="/opt/homebrew/Cellar/llvm/21.1.0/bin:$PATH"
 ```
 
-### Empty Coverage Reports
-**Solution**: Ensure you run your executables with `LLVM_PROFILE_FILE` environment variable set before generating reports.
+### Coverage Data Not Generated
+**Solution**: Ensure you build with coverage enabled and run tests:
+```bash
+cmake .. -DENABLE_COVERAGE=ON
+make
+pydcov coverage test "make test"
+```
 
-## Benefits of the Refactored System
+## Benefits of the Python-Only System
 
-1. **Zero Configuration**: Works out of the box for most projects
-2. **Maintainable**: No hardcoded module names or paths
-3. **Scalable**: Automatically adapts as you add/remove modules
-4. **Reusable**: Same coverage.cmake works across different projects
-5. **Flexible**: Supports both automatic and manual executable registration
+1. **Better Error Handling**: Comprehensive error reporting and validation
+2. **Cross-Platform**: Works consistently across Linux, macOS, and Windows
+3. **Automatic Detection**: No manual executable registration required
+4. **Library Support**: Works with library-only projects without executables
+5. **Incremental Coverage**: Advanced incremental coverage tracking capabilities
+6. **Unified Workflows**: Single interface for both GCC and Clang toolchains

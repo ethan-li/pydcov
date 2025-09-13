@@ -71,6 +71,15 @@ class CoverageManager:
                 except Exception as e:
                     self.logger.warning(f"Failed to remove {gcda_file}: {e}")
 
+            # Remove .gcno files (GCC coverage notes)
+            gcno_files = list(build_dir.rglob('*.gcno'))
+            for gcno_file in gcno_files:
+                try:
+                    gcno_file.unlink()
+                    self.logger.debug(f"Removed {gcno_file}")
+                except Exception as e:
+                    self.logger.warning(f"Failed to remove {gcno_file}: {e}")
+
             # Remove .profraw files (Clang coverage data)
             profraw_files = list(build_dir.rglob('*.profraw'))
             for profraw_file in profraw_files:
@@ -89,8 +98,8 @@ class CoverageManager:
                 except Exception as e:
                     self.logger.warning(f"Failed to remove {profdata_file}: {e}")
 
-            if gcda_files or profraw_files or profdata_files:
-                self.logger.info(f"Cleaned {len(gcda_files)} .gcda, {len(profraw_files)} .profraw, and {len(profdata_files)} .profdata files")
+            if gcda_files or gcno_files or profraw_files or profdata_files:
+                self.logger.info(f"Cleaned {len(gcda_files)} .gcda, {len(gcno_files)} .gcno, {len(profraw_files)} .profraw, and {len(profdata_files)} .profdata files")
 
         self.logger.success("Coverage data cleaned")
         return True

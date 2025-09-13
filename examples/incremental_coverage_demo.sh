@@ -102,7 +102,7 @@ main() {
     log_demo "This enables the compiler to generate coverage data during test execution."
     
     run_demo_command "Building project with coverage instrumentation" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/coverage.py build"
+                     "pydcov coverage build"
     
     pause_for_user
     
@@ -113,7 +113,7 @@ main() {
     log_demo "This cleans any existing coverage data and prepares for incremental collection."
     
     run_demo_command "Initializing incremental coverage collection" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py init"
+                     "pydcov incremental init"
     
     pause_for_user
     
@@ -123,7 +123,7 @@ main() {
     log_demo "Let's check the status to see the initial state."
     
     run_demo_command "Checking incremental coverage status" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py status"
+                     "pydcov incremental status"
     
     pause_for_user
     
@@ -135,7 +135,7 @@ main() {
     
     if [[ -d "algorithm/tests" ]]; then
         run_demo_command "Running algorithm module tests and adding coverage" \
-                         "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py add algorithm/tests/ -v"
+                         "pydcov incremental add \"python -m pytest algorithm/tests/ -v\""
     else
         log_warning "Algorithm tests directory not found, skipping this step"
     fi
@@ -148,7 +148,7 @@ main() {
     log_demo "Let's see how the status has changed after the first test run."
     
     run_demo_command "Checking status after first test run" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py status"
+                     "pydcov incremental status"
     
     pause_for_user
     
@@ -160,7 +160,7 @@ main() {
     
     if [[ -d "statistics/tests" ]]; then
         run_demo_command "Running statistics module tests and adding coverage" \
-                         "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py add statistics/tests/ -v"
+                         "pydcov incremental add \"python -m pytest statistics/tests/ -v\""
     else
         log_warning "Statistics tests directory not found, skipping this step"
     fi
@@ -173,7 +173,7 @@ main() {
     log_demo "Let's see how the coverage data has accumulated."
     
     run_demo_command "Checking status after second test run" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py status"
+                     "pydcov incremental status"
     
     pause_for_user
     
@@ -186,10 +186,10 @@ main() {
     # Try to find a specific test file to demonstrate
     if [[ -f "algorithm/tests/test_dynarray.py" ]]; then
         run_demo_command "Running specific test file" \
-                         "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py add algorithm/tests/test_dynarray.py::test_create -v"
+                         "pydcov incremental add \"python -m pytest algorithm/tests/test_dynarray.py::test_create -v\""
     else
         log_info "Specific test file not found, showing example command:"
-        echo -e "${CYAN}Example:${NC} python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py add tests/test_specific.py::test_method"
+        echo -e "${CYAN}Example:${NC} pydcov incremental add \"python -m pytest tests/test_specific.py::test_method\""
     fi
     
     pause_for_user
@@ -201,7 +201,7 @@ main() {
     log_demo "This combines coverage from all the test runs we've performed."
     
     run_demo_command "Merging all incremental coverage data" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py merge"
+                     "pydcov incremental merge"
     
     pause_for_user
     
@@ -212,7 +212,7 @@ main() {
     log_demo "This report shows the combined coverage from all test runs."
     
     run_demo_command "Generating final comprehensive coverage report" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py report"
+                     "pydcov incremental report"
     
     pause_for_user
     
@@ -222,7 +222,7 @@ main() {
     log_demo "Let's check the final status to see all the generated files."
     
     run_demo_command "Checking final status" \
-                     "python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py status"
+                     "pydcov incremental status"
     
     pause_for_user
     
@@ -253,13 +253,13 @@ main() {
     echo "  open build/coverage/incremental_report/index.html"
     echo ""
     echo -e "${CYAN}  # Add more tests to the coverage${NC}"
-    echo "  python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py add tests/additional_tests.py"
+    echo "  pydcov incremental add \"python -m pytest tests/additional_tests.py\""
     echo ""
     echo -e "${CYAN}  # Clean and start over${NC}"
-    echo "  python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py clean"
+    echo "  pydcov incremental clean"
     echo ""
     echo -e "${CYAN}  # Get help${NC}"
-    echo "  python3 ${COVERAGE_TOOLS_DIR}/scripts/incremental_coverage.py help"
+    echo "  pydcov incremental --help"
     echo ""
 }
 

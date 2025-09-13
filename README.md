@@ -5,7 +5,7 @@
 [![CI](https://github.com/ethan-li/pydcov/actions/workflows/ci.yml/badge.svg)](https://github.com/ethan-li/pydcov/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive coverage management system for CMake-based C/C++ projects. PyDCov provides modern Python tools for coverage collection, incremental coverage tracking, and reporting with support for both GCC/gcov and Clang/llvm-cov toolchains.
+A comprehensive **pure Python** coverage management system for C/C++ projects. PyDCov provides modern Python tools for coverage collection, incremental coverage tracking, and reporting with support for both GCC/gcov and Clang/llvm-cov toolchains. **No CMake dependencies required** for coverage operations.
 
 ## 🚀 Quick Start
 
@@ -47,13 +47,15 @@ pydcov coverage full "python -m pytest tests/"
 ## ✨ Features
 
 - **🔧 Easy Installation**: Simple `pip install pydcov`
+- **🐍 Pure Python**: No CMake dependencies for coverage operations
 - **🏗️ Project Templates**: Bootstrap new projects with `init-template`
 - **🔄 Cross-Platform**: Linux, macOS, Windows support
 - **⚙️ Multiple Compilers**: GCC/gcov and Clang/llvm-cov
 - **📊 Incremental Coverage**: Track coverage changes over time
 - **🧪 Framework-Agnostic**: Works with any testing framework
-- **🎯 CMake Integration**: Seamless CMake build system support
+- **🎯 CMake Integration**: Optional CMake build system support
 - **📈 Rich Reporting**: HTML, XML, and LCOV format reports
+- **🚀 Better Error Handling**: Comprehensive error reporting and validation
 
 ## 📋 Command Reference
 
@@ -424,6 +426,55 @@ pydcov coverage build
 # Make sure PyDCov is properly installed
 pip install --upgrade pydcov
 ```
+
+## 🔄 Migration from CMake Targets
+
+PyDCov has transitioned to a **pure Python implementation** for better cross-platform support and error handling. If you're currently using CMake targets, here's how to migrate:
+
+### CMake Target Migration
+
+| **Old CMake Target** | **New Python Command** | **Benefits** |
+|---------------------|------------------------|--------------|
+| `make coverage-clean` | `pydcov coverage clean` | Better error handling, cross-platform |
+| `make coverage-report` | `pydcov coverage report` | Automatic executable detection, library support |
+| `coverage_add_executable()` | Automatic detection | No manual registration needed |
+
+### Migration Steps
+
+1. **Replace CMake target calls**:
+   ```bash
+   # Before
+   make coverage-clean
+   make coverage-report
+
+   # After
+   pydcov coverage clean
+   pydcov coverage report
+   ```
+
+2. **Remove manual executable registration**:
+   ```cmake
+   # Before (manual registration)
+   coverage_add_executable(my_app)
+
+   # After (automatic detection)
+   # No action needed - PyDCov automatically detects executables
+   ```
+
+3. **Update CI/CD pipelines**:
+   ```yaml
+   # Before
+   - run: make coverage-report
+
+   # After
+   - run: pydcov coverage report
+   ```
+
+### Backward Compatibility
+
+- **CMake targets still work** but show deprecation warnings
+- **Gradual migration** is supported - you can migrate one command at a time
+- **No breaking changes** to existing workflows
 
 ### Getting Help
 

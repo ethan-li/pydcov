@@ -156,8 +156,7 @@ jobs:
 
     - name: Generate coverage report
       run: |
-        cd build
-        make coverage-report
+        pydcov coverage report
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'

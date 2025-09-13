@@ -71,15 +71,6 @@ class CMakeHelper:
     def build_project(self) -> bool:
         """Build the entire project."""
         return self.run_target('all')
-    
-    def clean_coverage(self) -> bool:
-        """Run coverage clean target."""
-        return self.run_target('coverage-clean')
-    
-    def run_coverage_report(self) -> bool:
-        """Run standard coverage report target."""
-        return self.run_target('coverage-report')
-    
 
     
     def configure_project(self, options: List[str] | None = None) -> bool:
