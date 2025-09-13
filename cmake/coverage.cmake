@@ -149,8 +149,7 @@ endfunction()
 # Create coverage output directory
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage)
 
-# Create incremental coverage directory
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/coverage/incremental)
+
 
 # ==============================================================================
 # GCC/gcov Coverage Targets
@@ -164,50 +163,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
         COMMENT "Cleaning GCC coverage data"
     )
 
-    # ==============================================================================
-    # Incremental Coverage Targets for GCC
-    # ==============================================================================
 
-    # Initialize incremental coverage (clean and prepare)
-    add_custom_target(coverage-incremental-init
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Incremental coverage initialized for GCC"
-        COMMENT "Initializing incremental coverage collection for GCC"
-    )
-
-    # Add current coverage data to incremental collection
-    add_custom_target(coverage-incremental-add
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Collecting all coverage files from build directory..."
-        # Use external script to collect coverage files
-        COMMAND bash ${CMAKE_SOURCE_DIR}/cmake/collect_coverage_files.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Coverage files collected successfully"
-        COMMAND find ${CMAKE_BINARY_DIR}/coverage/incremental -name "*.gcda" -o -name "*.gcno" | wc -l | xargs -I {} echo "Total files collected: {}"
-        COMMENT "Collecting all generated GCC coverage files"
-    )
-
-    # Merge all incremental coverage data
-    add_custom_target(coverage-incremental-merge
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
-        COMMAND ${CMAKE_COMMAND} -E echo "Merging incremental coverage data..."
-        # For GCC, generate coverage info from collected files
-        COMMAND lcov --capture --directory ${CMAKE_BINARY_DIR}/coverage/incremental --output-file ${CMAKE_BINARY_DIR}/coverage/incremental_merged.info --rc branch_coverage=1 --ignore-errors gcov,source,unused || echo "No gcda files to merge"
-        COMMAND ${CMAKE_COMMAND} -E echo "GCC coverage data merged successfully"
-        COMMENT "Merging all incremental GCC coverage data"
-        DEPENDS coverage-incremental-add
-    )
-
-    # Generate final incremental coverage report
-    add_custom_target(coverage-incremental-report
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental_report
-        COMMAND ${CMAKE_COMMAND} -E echo "Generating incremental coverage report..."
-        COMMAND genhtml ${CMAKE_BINARY_DIR}/coverage/incremental_merged.info --output-directory ${CMAKE_BINARY_DIR}/coverage/incremental_report --rc branch_coverage=1 --ignore-errors source,unused
-        COMMAND ${CMAKE_COMMAND} -E echo "Incremental coverage report generated successfully!"
-        COMMAND ${CMAKE_COMMAND} -E echo "Report available at: ${CMAKE_BINARY_DIR}/coverage/incremental_report/index.html"
-        COMMENT "Generating final incremental coverage report for GCC"
-        DEPENDS coverage-incremental-merge
-    )
 
     # Auto-detect executables if none registered
     add_custom_target(coverage-detect-executables
@@ -297,39 +253,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         COMMENT "Cleaning Clang coverage data"
     )
 
-    # ==============================================================================
-    # Incremental Coverage Targets for Clang
-    # ==============================================================================
 
-    # Initialize incremental coverage (clean and prepare)
-    add_custom_target(coverage-incremental-init
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Incremental coverage initialized for Clang"
-        COMMENT "Initializing incremental coverage collection for Clang"
-    )
-
-    # Add current coverage data to incremental collection
-    add_custom_target(coverage-incremental-add
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Collecting all coverage files from build directory..."
-        # Use external script to collect coverage files
-        COMMAND bash ${CMAKE_SOURCE_DIR}/cmake/collect_coverage_files.sh ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/coverage/incremental
-        COMMAND ${CMAKE_COMMAND} -E echo "Coverage files collected successfully"
-        COMMAND find ${CMAKE_BINARY_DIR}/coverage/incremental -name "*.profraw" | wc -l | xargs -I {} echo "Total files collected: {}"
-        COMMENT "Collecting all generated Clang coverage files"
-    )
-
-    # Merge all incremental coverage data
-    add_custom_target(coverage-incremental-merge
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/coverage
-        COMMAND ${CMAKE_COMMAND} -E echo "Merging incremental coverage data..."
-        # Merge profraw files using llvm-profdata
-        COMMAND ${LLVM_PROFDATA_EXECUTABLE} merge -sparse ${CMAKE_BINARY_DIR}/coverage/incremental/*.profraw -o ${CMAKE_BINARY_DIR}/coverage/incremental_merged.profdata || echo "No profraw files to merge"
-        COMMAND ${CMAKE_COMMAND} -E echo "Clang coverage data merged successfully"
-        COMMENT "Merging all incremental Clang coverage data"
-        DEPENDS coverage-incremental-add
-    )
 
     # Merge coverage data
     add_custom_target(coverage-merge
@@ -344,11 +268,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         DEPENDS coverage-merge
     )
 
-    # Generate final incremental coverage report
-    add_custom_target(coverage-incremental-report
-        COMMENT "Generating final incremental coverage report for Clang"
-        DEPENDS coverage-incremental-merge
-    )
+
 
     # Function to add coverage commands for registered executables
     function(coverage_finalize_clang_targets)
@@ -400,56 +320,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         message(STATUS "Coverage configured for executables: ${exec_targets}")
     endfunction()
 
-    # Function to add incremental coverage commands for registered executables
-    function(coverage_finalize_clang_incremental_targets)
-        coverage_get_executables(exec_targets exec_paths)
 
-        if(NOT exec_targets)
-            message(WARNING "No executables registered for incremental coverage. Use coverage_add_executable() or enable auto-detection.")
-            return()
-        endif()
-
-        # Build executable list with generator expressions
-        set(exec_list "")
-        foreach(target ${exec_targets})
-            if(TARGET ${target})
-                set(exec_list "${exec_list} $<TARGET_FILE:${target}>")
-            endif()
-        endforeach()
-
-        # Generate a script for incremental coverage with proper generator expression handling
-        set(incremental_coverage_script_template "${CMAKE_BINARY_DIR}/run_incremental_coverage_template.sh")
-        file(WRITE ${incremental_coverage_script_template} "#!/bin/bash\n")
-        file(APPEND ${incremental_coverage_script_template} "set -e\n")
-        file(APPEND ${incremental_coverage_script_template} "echo \"Running incremental coverage for executables: ${exec_targets}\"\n")
-        file(APPEND ${incremental_coverage_script_template} "echo \"Generating HTML incremental coverage report...\"\n")
-        file(APPEND ${incremental_coverage_script_template} "${LLVM_COV_EXECUTABLE} show${exec_list} -instr-profile=${CMAKE_BINARY_DIR}/coverage/incremental_merged.profdata -format=html -output-dir=${CMAKE_BINARY_DIR}/coverage/incremental_report\n")
-        file(APPEND ${incremental_coverage_script_template} "echo \"Generating LCOV incremental coverage report...\"\n")
-        file(APPEND ${incremental_coverage_script_template} "${LLVM_COV_EXECUTABLE} export${exec_list} -instr-profile=${CMAKE_BINARY_DIR}/coverage/incremental_merged.profdata -format=lcov > ${CMAKE_BINARY_DIR}/coverage/incremental_merged.info\n")
-        file(APPEND ${incremental_coverage_script_template} "echo \"Incremental coverage reports generated successfully!\"\n")
-        file(APPEND ${incremental_coverage_script_template} "echo \"Report available at: ${CMAKE_BINARY_DIR}/coverage/incremental_report/index.html\"\n")
-
-        # Use file(GENERATE) to properly expand generator expressions
-        file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/run_incremental_coverage.sh"
-             INPUT "${incremental_coverage_script_template}"
-             FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
-
-        # Add the incremental coverage command that runs the generated script
-        add_custom_command(TARGET coverage-incremental-report POST_BUILD
-            COMMAND bash "${CMAKE_BINARY_DIR}/run_incremental_coverage.sh"
-            COMMENT "Generating incremental coverage reports for: ${exec_targets}"
-            VERBATIM
-        )
-
-        # Add dependencies on the executables
-        foreach(target ${exec_targets})
-            if(TARGET ${target})
-                add_dependencies(coverage-incremental-report ${target})
-            endif()
-        endforeach()
-
-        message(STATUS "Incremental coverage configured for executables: ${exec_targets}")
-    endfunction()
 
 endif()
 
@@ -471,7 +342,6 @@ function(coverage_finalize)
         coverage_finalize_gcc_targets()
     elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         coverage_finalize_clang_targets()
-        coverage_finalize_clang_incremental_targets()
     endif()
 endfunction()
 
@@ -492,7 +362,7 @@ message(STATUS "  Available targets: coverage-clean, coverage-report")
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     message(STATUS "  Additional target: coverage-merge")
 endif()
-message(STATUS "  Incremental coverage targets: coverage-incremental-init, coverage-incremental-add, coverage-incremental-merge, coverage-incremental-report")
+
 message(STATUS "  Use coverage_add_executable(target) to register specific executables")
 message(STATUS "  Or rely on auto-detection of non-test executables")
 
@@ -503,7 +373,7 @@ if(PYTHON3_EXECUTABLE)
     message(STATUS "    Python executable: ${PYTHON3_EXECUTABLE}")
     message(STATUS "    Python tools directory: ${CMAKE_SOURCE_DIR}/coverage_tools/")
     message(STATUS "    Use: python3 coverage_tools/scripts/coverage.py [command]")
-    message(STATUS "    Use: python3 coverage_tools/scripts/incremental_coverage.py [command]")
+
     message(STATUS "    Use: python3 coverage_tools/scripts/coverage_modules.py [command]")
 else()
     message(WARNING "  Python coverage tools: python3 not found")

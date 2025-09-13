@@ -87,7 +87,10 @@ class PathManager:
         try:
             with open(cmake_cache, 'r') as f:
                 content = f.read()
-                if 'ENABLE_COVERAGE:BOOL=ON' in content:
+                # Check for various forms of ENABLE_COVERAGE=ON
+                if ('ENABLE_COVERAGE:BOOL=ON' in content or
+                    'ENABLE_COVERAGE:UNINITIALIZED=ON' in content or
+                    'ENABLE_COVERAGE=ON' in content):
                     return True
                 else:
                     self.logger.error("Coverage not enabled in CMake configuration")

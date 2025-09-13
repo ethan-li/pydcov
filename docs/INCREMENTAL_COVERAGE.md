@@ -1,16 +1,17 @@
 # Incremental Coverage Collection
 
-This document describes the incremental coverage collection system that allows you to accumulate coverage data across multiple pytest executions and generate comprehensive coverage reports.
+This document describes the Python-based incremental coverage collection system that allows you to accumulate coverage data across multiple test executions and generate comprehensive coverage reports.
 
 ## Overview
 
 The incremental coverage system enables you to:
 
-- **Preserve coverage data** between multiple pytest runs instead of overwriting it
+- **Preserve coverage data** between multiple test runs instead of overwriting it
 - **Accumulate coverage** from successive test executions
 - **Generate comprehensive reports** that combine all incremental coverage data
 - **Run targeted tests** and build up coverage incrementally
 - **Support both GCC/gcov and Clang/llvm-cov** toolchains
+- **Pure Python implementation** with no CMake dependencies for coverage operations
 
 ## Quick Start
 
@@ -19,13 +20,13 @@ The incremental coverage system enables you to:
 First, build your project with coverage instrumentation:
 
 ```bash
-python3 coverage_tools/scripts/coverage.py build
+pydcov coverage build
 ```
 
 ### 2. Initialize Incremental Coverage
 
 ```bash
-python3 coverage_tools/scripts/incremental_coverage.py init
+pydcov incremental init
 ```
 
 ### 3. Run Tests Incrementally
@@ -34,22 +35,21 @@ Run different test suites or specific tests, accumulating coverage:
 
 ```bash
 # Run basic tests
-python3 coverage_tools/scripts/incremental_coverage.py add tests/test_basic.py
+pydcov incremental add "python -m pytest tests/test_basic.py"
 
 # Run advanced tests
-python3 coverage_tools/scripts/incremental_coverage.py add tests/test_advanced.py -v
+pydcov incremental add "python -m pytest tests/test_advanced.py -v"
 
 # Run specific test methods
-python3 coverage_tools/scripts/incremental_coverage.py add algorithm/tests/test_dynarray.py::test_create
+pydcov incremental add "python -m pytest algorithm/tests/test_dynarray.py::test_create"
 ```
 
 ### 4. Generate Final Report
 
-Merge all accumulated data and generate the comprehensive report:
+Generate the comprehensive report (merging is automatic):
 
 ```bash
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
+pydcov incremental report
 ```
 
 ### 5. View Results
@@ -66,48 +66,35 @@ open build/coverage/incremental_report/index.html
 
 ```bash
 # 1. Build with coverage
-python3 coverage_tools/scripts/coverage.py build
+pydcov coverage build
 
 # 2. Initialize incremental coverage
-python3 coverage_tools/scripts/incremental_coverage.py init
+pydcov incremental init
 
 # 3. Run different test suites incrementally
-python3 coverage_tools/scripts/incremental_coverage.py add algorithm/tests/
-python3 coverage_tools/scripts/incremental_coverage.py add statistics/tests/
-python3 coverage_tools/scripts/incremental_coverage.py add tests/integration/
+pydcov incremental add "python -m pytest algorithm/tests/"
+pydcov incremental add "python -m pytest statistics/tests/"
+pydcov incremental add "python -m pytest tests/integration/"
 
-# 4. Merge and generate final report
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
+# 4. Generate final report (merging is automatic)
+pydcov incremental report
 
 # 5. Check status
-python3 coverage_tools/scripts/incremental_coverage.py status
-```
-
-### Option 2: All-in-One
-
-```bash
-# Build with coverage
-python3 coverage_tools/scripts/coverage.py build
-
-# Run complete incremental workflow
-python3 coverage_tools/scripts/incremental_coverage.py full tests/
+pydcov incremental status
 ```
 
 ## Commands Reference
 
-### `python3 coverage_tools/scripts/incremental_coverage.py [command] [options]`
+### `pydcov incremental [command] [options]`
 
 | Command | Description | Example |
 |---------|-------------|---------|
-| `init` | Initialize incremental coverage collection | `python3 coverage_tools/scripts/incremental_coverage.py init` |
-| `add [pytest_args]` | Run pytest and add coverage data | `python3 coverage_tools/scripts/incremental_coverage.py add tests/test_basic.py` |
-| `merge` | Merge all accumulated coverage data | `python3 coverage_tools/scripts/incremental_coverage.py merge` |
-| `report` | Generate final comprehensive coverage report | `python3 coverage_tools/scripts/incremental_coverage.py report` |
-| `full [pytest_args]` | Complete workflow: init, add, merge, report | `python3 coverage_tools/scripts/incremental_coverage.py full tests/` |
-| `clean` | Clean all incremental coverage data | `python3 coverage_tools/scripts/incremental_coverage.py clean` |
-| `status` | Show current incremental coverage status | `python3 coverage_tools/scripts/incremental_coverage.py status` |
-| `help` | Show help message | `python3 coverage_tools/scripts/incremental_coverage.py help` |
+| `init` | Initialize incremental coverage collection | `pydcov incremental init` |
+| `add "test_cmd"` | Run test command and add coverage data | `pydcov incremental add "python -m pytest tests/test_basic.py"` |
+| `merge` | Merge all accumulated coverage data | `pydcov incremental merge` |
+| `report` | Generate final comprehensive coverage report | `pydcov incremental report` |
+| `clean` | Clean all incremental coverage data | `pydcov incremental clean` |
+| `status` | Show current incremental coverage status | `pydcov incremental status` |
 
 ## Advanced Usage
 
@@ -115,28 +102,27 @@ python3 coverage_tools/scripts/incremental_coverage.py full tests/
 
 ```bash
 # Run tests matching a pattern
-python3 coverage_tools/scripts/incremental_coverage.py add -k "test_create"
+pydcov incremental add "python -m pytest -k test_create"
 
 # Run tests with specific markers
-python3 coverage_tools/scripts/incremental_coverage.py add -m "not slow"
+pydcov incremental add "python -m pytest -m 'not slow'"
 
 # Run tests with verbose output
-python3 coverage_tools/scripts/incremental_coverage.py add tests/ -v --tb=short
+pydcov incremental add "python -m pytest tests/ -v --tb=short"
 ```
 
 ### Multiple Module Testing
 
 ```bash
 # Initialize
-python3 coverage_tools/scripts/incremental_coverage.py init
+pydcov incremental init
 
 # Test each module separately
-python3 coverage_tools/scripts/incremental_coverage.py add algorithm/tests/
-python3 coverage_tools/scripts/incremental_coverage.py add statistics/tests/
+pydcov incremental add "python -m pytest algorithm/tests/"
+pydcov incremental add "python -m pytest statistics/tests/"
 
 # Generate combined report
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
+pydcov incremental report
 ```
 
 ### Continuous Integration Workflow
@@ -146,19 +132,17 @@ python3 coverage_tools/scripts/incremental_coverage.py report
 # CI script for incremental coverage
 
 # Build with coverage
-python3 coverage_tools/scripts/coverage.py build
+pydcov coverage build
 
 # Initialize incremental coverage
-python3 coverage_tools/scripts/incremental_coverage.py init
+pydcov incremental init
 
-# Run test suites in parallel (if supported)
-python3 coverage_tools/scripts/incremental_coverage.py add algorithm/tests/ &
-python3 coverage_tools/scripts/incremental_coverage.py add statistics/tests/ &
-wait
+# Run test suites sequentially (parallel support depends on test framework)
+pydcov incremental add "python -m pytest algorithm/tests/"
+pydcov incremental add "python -m pytest statistics/tests/"
 
 # Generate final report
-python3 coverage_tools/scripts/incremental_coverage.py merge
-python3 coverage_tools/scripts/incremental_coverage.py report
+pydcov incremental report
 
 # Upload coverage report
 # ... upload build/coverage/incremental_report/ ...
@@ -206,14 +190,14 @@ The system automatically sets appropriate environment variables:
 - **Clang**: `LLVM_PROFILE_FILE=build/coverage-%p.profraw`
 - **GCC**: Uses default gcov behavior
 
-### CMake Integration
+### Python Implementation
 
-The system adds new CMake targets:
+The system uses pure Python for all coverage operations:
 
-- `coverage-incremental-init`: Initialize incremental coverage
-- `coverage-incremental-add`: Add current coverage data
-- `coverage-incremental-merge`: Merge accumulated data
-- `coverage-incremental-report`: Generate final report
+- **Tool Detection**: Automatically finds `llvm-profdata`, `llvm-cov`, `lcov`, `genhtml`
+- **File Management**: Python-based file collection and organization
+- **Cross-Platform**: Works on Linux, macOS, and Windows
+- **No CMake Dependencies**: Coverage operations don't require CMake targets
 
 ## Troubleshooting
 
@@ -233,7 +217,7 @@ The system adds new CMake targets:
 **Problem**: `coverage-incremental-merge` fails with "No files found".
 
 **Solution**:
-1. Check that tests actually ran: `python3 coverage_tools/scripts/incremental_coverage.py status`
+1. Check that tests actually ran: `pydcov incremental status`
 2. Ensure pytest found and executed tests
 3. Verify coverage data was generated in the incremental directory
 
@@ -251,7 +235,7 @@ Enable verbose output to debug issues:
 
 ```bash
 # Check current status
-python3 coverage_tools/scripts/incremental_coverage.py status
+pydcov incremental status
 
 # Manually inspect coverage files
 ls -la build/coverage/incremental/
@@ -269,9 +253,9 @@ Group related tests together for better organization:
 
 ```bash
 # Group by functionality
-python3 coverage_tools/scripts/incremental_coverage.py add tests/unit/
-python3 coverage_tools/scripts/incremental_coverage.py add tests/integration/
-python3 coverage_tools/scripts/incremental_coverage.py add tests/performance/
+pydcov incremental add "python -m pytest tests/unit/"
+pydcov incremental add "python -m pytest tests/integration/"
+pydcov incremental add "python -m pytest tests/performance/"
 ```
 
 ### 2. Use Descriptive Test Selection
@@ -280,10 +264,10 @@ Use pytest's selection features to run meaningful test subsets:
 
 ```bash
 # Run only fast tests first
-python3 coverage_tools/scripts/incremental_coverage.py add -m "not slow"
+pydcov incremental add "python -m pytest -m 'not slow'"
 
 # Then run comprehensive tests
-python3 coverage_tools/scripts/incremental_coverage.py add -m "slow"
+pydcov incremental add "python -m pytest -m slow"
 ```
 
 ### 3. Monitor Coverage Progress
@@ -291,10 +275,10 @@ python3 coverage_tools/scripts/incremental_coverage.py add -m "slow"
 Check status between runs to monitor progress:
 
 ```bash
-python3 coverage_tools/scripts/incremental_coverage.py add tests/basic/
-python3 coverage_tools/scripts/incremental_coverage.py status
-python3 coverage_tools/scripts/incremental_coverage.py add tests/advanced/
-python3 coverage_tools/scripts/incremental_coverage.py status
+pydcov incremental add "python -m pytest tests/basic/"
+pydcov incremental status
+pydcov incremental add "python -m pytest tests/advanced/"
+pydcov incremental status
 ```
 
 ### 4. Clean Between Major Changes
@@ -302,8 +286,8 @@ python3 coverage_tools/scripts/incremental_coverage.py status
 Clean incremental data when making significant code changes:
 
 ```bash
-python3 coverage_tools/scripts/incremental_coverage.py clean
-python3 coverage_tools/scripts/incremental_coverage.py init
+pydcov incremental clean
+pydcov incremental init
 # ... run tests again ...
 ```
 
@@ -311,8 +295,8 @@ python3 coverage_tools/scripts/incremental_coverage.py init
 
 The incremental coverage system is designed to work alongside existing coverage workflows:
 
-- **Standard coverage**: `python3 coverage_tools/scripts/coverage.py full tests/` continues to work as before
-- **Module coverage**: `python3 coverage_tools/scripts/coverage_modules.py` provides enhanced module coverage
+- **Standard coverage**: `pydcov coverage full tests/` continues to work as before
+- **Module coverage**: `pydcov modules` provides enhanced module coverage
 - **CI/CD**: Can be integrated into existing CI pipelines
 
 ## Performance Considerations

@@ -80,21 +80,7 @@ class CMakeHelper:
         """Run standard coverage report target."""
         return self.run_target('coverage-report')
     
-    def run_incremental_init(self) -> bool:
-        """Run incremental coverage initialization target."""
-        return self.run_target('coverage-incremental-init')
-    
-    def run_incremental_add(self) -> bool:
-        """Run incremental coverage add target."""
-        return self.run_target('coverage-incremental-add')
-    
-    def run_incremental_merge(self) -> bool:
-        """Run incremental coverage merge target."""
-        return self.run_target('coverage-incremental-merge')
-    
-    def run_incremental_report(self) -> bool:
-        """Run incremental coverage report target."""
-        return self.run_target('coverage-incremental-report')
+
     
     def configure_project(self, options: List[str] | None = None) -> bool:
         """

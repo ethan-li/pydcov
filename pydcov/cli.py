@@ -118,6 +118,8 @@ def create_incremental_parser(subparsers):
         action='store_true',
         help='Disable colored output'
     )
+
+
     
     incremental_parser.add_argument(
         '--project-root',
@@ -254,7 +256,7 @@ def handle_incremental_command(args) -> int:
     """Handle incremental coverage subcommand."""
     try:
         manager = IncrementalCoverageManager(args.project_root)
-        
+
         if args.command == 'init':
             success = manager.init()
         elif args.command == 'add':
@@ -273,9 +275,9 @@ def handle_incremental_command(args) -> int:
         else:
             print(f"Error: Unknown incremental command: {args.command}")
             return 1
-            
+
         return 0 if success else 1
-        
+
     except Exception as e:
         print(f"Error: {e}")
         return 1
