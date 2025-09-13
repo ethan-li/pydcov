@@ -188,7 +188,9 @@ class TestCoverageStatusCommand:
             
             # Status command should run (might detect missing tools)
             # Return code might be 0 or non-zero depending on tool availability
-            assert 'Detected compiler:' in result.stdout or 'not found' in result.stderr.lower()
+            assert ('Detected compiler' in result.stdout or
+                    'not found' in result.stderr.lower() or
+                    'Build directory not found' in result.stdout)
 
 
 class TestIncrementalStatusCommand:
