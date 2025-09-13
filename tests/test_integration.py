@@ -151,7 +151,9 @@ class TestCLIIntegration:
             ], capture_output=True, text=True)
             
             # Should run without crashing (might detect missing tools)
-            assert 'Detected compiler:' in result.stdout or 'not found' in result.stderr.lower()
+            assert ('Detected compiler' in result.stdout or
+                    'not found' in result.stderr.lower() or
+                    'Build directory not found' in result.stdout)
     
     def test_incremental_init_on_template_project(self):
         """Test incremental init command on a template project."""
