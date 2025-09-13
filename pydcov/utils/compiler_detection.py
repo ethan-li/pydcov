@@ -24,37 +24,161 @@ class CompilerDetector:
     def detect_compiler(self) -> str:
         """
         Detect the primary compiler being used.
-        
+
         Returns:
             'gcc' or 'clang'
         """
         if 'compiler' in self._cache:
             return self._cache['compiler']
-        
+
+        # First try to detect from CMake cache (most reliable)
+        compiler = self._detect_from_cmake_cache()
+        if compiler:
+            self._cache['compiler'] = compiler
+            self.logger.info(f"Detected compiler from CMake cache: {compiler}")
+            return compiler
+
+        # Fallback to system detection
+        compiler = self._detect_from_system()
+        self._cache['compiler'] = compiler
+        self.logger.info(f"Detected compiler from system: {compiler}")
+        return compiler
+
+    def _detect_from_cmake_cache(self) -> str | None:
+        """
+        Detect compiler from CMake cache file and configuration log.
+
+        Returns:
+            'gcc', 'clang', or None if not found
+        """
+        try:
+            # Look for CMake files in common locations
+            base_paths = [
+                Path.cwd(),
+                Path.cwd() / 'build',
+                Path.cwd().parent / 'build',
+            ]
+
+            for base_path in base_paths:
+                # Try CMakeCache.txt first
+                cache_path = base_path / 'CMakeCache.txt'
+                if cache_path.exists():
+                    result = self._parse_cmake_cache(cache_path)
+                    if result:
+                        return result
+
+                # Try CMake configuration log
+                config_log_path = base_path / 'CMakeFiles' / 'CMakeConfigureLog.yaml'
+                if config_log_path.exists():
+                    result = self._parse_cmake_config_log(config_log_path)
+                    if result:
+                        return result
+
+        except Exception as e:
+            self.logger.debug(f"Failed to read CMake files: {e}")
+
+        return None
+
+    def _parse_cmake_cache(self, cache_path: Path) -> str | None:
+        """Parse CMake cache file to determine compiler."""
+        try:
+            with open(cache_path, 'r') as f:
+                content = f.read()
+
+            # Look for CMAKE_C_COMPILER_ID or CMAKE_CXX_COMPILER_ID
+            import re
+
+            # Check for compiler ID patterns
+            patterns = [
+                r'CMAKE_C_COMPILER_ID:INTERNAL=(\w+)',
+                r'CMAKE_CXX_COMPILER_ID:INTERNAL=(\w+)',
+            ]
+
+            for pattern in patterns:
+                match = re.search(pattern, content)
+                if match:
+                    compiler_id = match.group(1).lower()
+                    if 'clang' in compiler_id or 'appleclang' in compiler_id:
+                        return 'clang'
+                    elif 'gnu' in compiler_id or 'gcc' in compiler_id:
+                        return 'gcc'
+
+            # Also check compiler paths
+            compiler_patterns = [
+                r'CMAKE_C_COMPILER:FILEPATH=([^\n]+)',
+                r'CMAKE_CXX_COMPILER:FILEPATH=([^\n]+)',
+            ]
+
+            for pattern in compiler_patterns:
+                match = re.search(pattern, content)
+                if match:
+                    compiler_path = match.group(1).lower()
+                    if 'clang' in compiler_path:
+                        return 'clang'
+                    elif 'gcc' in compiler_path:
+                        return 'gcc'
+
+        except Exception as e:
+            self.logger.debug(f"Failed to parse CMake cache {cache_path}: {e}")
+
+        return None
+
+    def _parse_cmake_config_log(self, config_log_path: Path) -> str | None:
+        """Parse CMake configuration log to determine compiler."""
+        try:
+            with open(config_log_path, 'r') as f:
+                content = f.read()
+
+            # Look for compiler identification messages
+            import re
+
+            # Pattern to match compiler identification lines
+            patterns = [
+                r'The C compiler identification is (\w+)',
+                r'The CXX compiler identification is (\w+)',
+            ]
+
+            for pattern in patterns:
+                match = re.search(pattern, content, re.IGNORECASE)
+                if match:
+                    compiler_id = match.group(1).lower()
+                    if 'clang' in compiler_id or 'appleclang' in compiler_id:
+                        return 'clang'
+                    elif 'gnu' in compiler_id or 'gcc' in compiler_id:
+                        return 'gcc'
+
+        except Exception as e:
+            self.logger.debug(f"Failed to parse CMake config log {config_log_path}: {e}")
+
+        return None
+
+    def _detect_from_system(self) -> str:
+        """
+        Detect compiler from system availability.
+
+        Returns:
+            'gcc' or 'clang'
+        """
         # Check for gcc first
         if shutil.which('gcc'):
             try:
                 result = subprocess.run(
-                    ['gcc', '--version'], 
-                    capture_output=True, 
-                    text=True, 
+                    ['gcc', '--version'],
+                    capture_output=True,
+                    text=True,
                     timeout=10
                 )
                 if 'clang' in result.stdout.lower():
-                    compiler = 'clang'
+                    return 'clang'
                 else:
-                    compiler = 'gcc'
+                    return 'gcc'
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-                compiler = 'gcc'  # Assume gcc if version check fails
+                return 'gcc'  # Assume gcc if version check fails
         elif shutil.which('clang'):
-            compiler = 'clang'
+            return 'clang'
         else:
             self.logger.error("No suitable compiler found (gcc or clang)")
             raise RuntimeError("No compiler found")
-        
-        self._cache['compiler'] = compiler
-        self.logger.info(f"Detected compiler: {compiler}")
-        return compiler
     
     def find_coverage_tools(self, compiler: str | None = None) -> Dict[str, str | None]:
         """
