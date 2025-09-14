@@ -237,60 +237,89 @@ class CoverageFileManager:
         """Generate Clang coverage report using llvm-cov."""
         tools = self.tool_manager.get_coverage_tools('clang')
         llvm_cov = tools.get('llvm_cov')
-        
+
         if not llvm_cov:
             self.logger.error("llvm-cov not found")
             return False
-        
+
         profdata_file = self.coverage_dir / 'incremental_merged.profdata'
         if not profdata_file.exists():
             self.logger.error(f"Merged profdata file not found: {profdata_file}")
             return False
-        
-        if not executables:
-            # Try to find executables automatically, excluding CMake files
-            all_files = list(self.build_dir.rglob('*'))
-            executables = []
-            for e in all_files:
-                if (e.is_file() and
-                    e.stat().st_mode & 0o111 and
-                    'CMakeFiles' not in str(e) and
-                    not str(e).endswith('.bin')):
-                    executables.append(e)
 
-        if not executables:
-            self.logger.warning("No executables found for coverage report")
-            # For library-only projects, try to find object files
-            object_files = list(self.build_dir.rglob('*.o'))
-            if object_files:
-                self.logger.info(f"Found {len(object_files)} object files, attempting coverage report without executables")
-                # Use a different approach for library coverage
-                return self._generate_clang_library_report(report_dir, profdata_file)
-            else:
-                self.logger.error("No executables or object files found for coverage report")
-                return False
-        
+        # For Clang coverage, find object files and filter those with coverage data
+        object_files = []
+        for obj_file in self.build_dir.rglob('*.o'):
+            # Skip CMake compiler ID files
+            if 'CMakeFiles' in str(obj_file) and ('CompilerIdC' in str(obj_file) or 'CompilerIdCXX' in str(obj_file)):
+                continue
+            object_files.append(obj_file)
+
+        if not object_files:
+            self.logger.error("No object files found for coverage report")
+            return False
+
+        # Filter object files that actually have coverage data
+        valid_object_files = []
+        for obj_file in object_files:
+            try:
+                # Test if this object file has coverage data
+                test_cmd = [llvm_cov, 'report', f'-instr-profile={profdata_file}', str(obj_file)]
+                result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=30)
+                if result.returncode == 0 and 'TOTAL' in result.stdout:
+                    valid_object_files.append(obj_file)
+                    self.logger.debug(f"Object file {obj_file.name} has coverage data")
+            except Exception as e:
+                self.logger.debug(f"Skipping {obj_file.name}: {e}")
+
+        if not valid_object_files:
+            self.logger.error("No object files with coverage data found")
+            return False
+
+        self.logger.info(f"Found {len(valid_object_files)} object files with coverage data")
+
+        # Try to generate combined report first
         try:
-            # Generate HTML report
-            cmd = [llvm_cov, 'show'] + [str(e) for e in executables] + [
+            cmd = [llvm_cov, 'show'] + [str(obj) for obj in valid_object_files] + [
                 f'-instr-profile={profdata_file}',
                 '-format=html',
                 f'-output-dir={report_dir}'
             ]
-            
-            self.logger.info("Generating HTML coverage report...")
+
+            self.logger.info(f"Generating combined HTML coverage report...")
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-            
+
             if result.returncode == 0:
-                self.logger.success(f"HTML report generated at {report_dir / 'index.html'}")
-                return True
+                # Check if the report actually contains coverage data
+                index_file = report_dir / 'index.html'
+                if index_file.exists():
+                    with open(index_file, 'r') as f:
+                        content = f.read()
+                    # Check if the report contains actual coverage data (not just empty totals)
+                    if '- (0/0)' not in content or 'coverage/' in content:
+                        self.logger.success(f"HTML report generated at {report_dir / 'index.html'}")
+                        return True
+                    else:
+                        self.logger.warning("Combined report generated but contains no coverage data")
+                        # Remove only the empty index.html and fall back to individual reports
+                        index_file = report_dir / 'index.html'
+                        if index_file.exists():
+                            index_file.unlink()
+                        # Fall back to individual reports
+                        return self._generate_individual_clang_reports(report_dir, profdata_file, valid_object_files)
+                else:
+                    self.logger.warning("Combined report command succeeded but no index.html was created")
+                    # Fall back to individual reports
+                    return self._generate_individual_clang_reports(report_dir, profdata_file, valid_object_files)
             else:
-                self.logger.error(f"llvm-cov show failed: {result.stderr}")
-                return False
-                
+                self.logger.warning(f"Combined report failed: {result.stderr}")
+                # Fall back to individual reports
+                return self._generate_individual_clang_reports(report_dir, profdata_file, valid_object_files)
+
         except Exception as e:
-            self.logger.error(f"Failed to generate Clang report: {e}")
-            return False
+            self.logger.warning(f"Combined report failed: {e}")
+            # Fall back to individual reports
+            return self._generate_individual_clang_reports(report_dir, profdata_file, valid_object_files)
     
     def _generate_gcc_report(self, report_dir: Path) -> bool:
         """Generate GCC coverage report using genhtml."""
@@ -350,6 +379,306 @@ class CoverageFileManager:
 
 
 
+
+    def _generate_individual_clang_reports(self, report_dir: Path, profdata_file: Path, object_files: List[Path]) -> bool:
+        """Generate individual Clang coverage reports for each object file and create a combined index."""
+        llvm_cov = self.tool_manager.find_tool('llvm-cov')
+        if not llvm_cov:
+            self.logger.error("llvm-cov not found")
+            return False
+
+        self.logger.info(f"Generating individual coverage reports for {len(object_files)} object files...")
+
+        # Create subdirectories for individual reports
+        individual_reports_dir = report_dir / 'individual'
+        individual_reports_dir.mkdir(parents=True, exist_ok=True)
+
+        successful_reports = []
+        total_coverage_data = []
+
+        for i, obj_file in enumerate(object_files):
+            obj_name = obj_file.stem
+            obj_report_dir = individual_reports_dir / obj_name
+            obj_report_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                # Generate individual HTML report
+                cmd = [llvm_cov, 'show', str(obj_file),
+                       f'-instr-profile={profdata_file}',
+                       '-format=html',
+                       f'-output-dir={obj_report_dir}']
+
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+                if result.returncode == 0:
+                    successful_reports.append((obj_name, obj_report_dir))
+                    self.logger.debug(f"Generated report for {obj_name}")
+
+                    # Also get text summary for combined report
+                    summary_cmd = [llvm_cov, 'report', str(obj_file), f'-instr-profile={profdata_file}']
+                    summary_result = subprocess.run(summary_cmd, capture_output=True, text=True, timeout=30)
+                    if summary_result.returncode == 0:
+                        total_coverage_data.append(summary_result.stdout)
+                else:
+                    self.logger.warning(f"Failed to generate report for {obj_name}: {result.stderr}")
+
+            except Exception as e:
+                self.logger.warning(f"Failed to generate report for {obj_name}: {e}")
+
+        if not successful_reports:
+            self.logger.error("No individual reports were generated successfully")
+            return False
+
+        # Create a combined index.html
+        self._create_combined_index(report_dir, successful_reports, total_coverage_data)
+
+        self.logger.success(f"Generated {len(successful_reports)} individual coverage reports")
+        self.logger.success(f"Combined report available at {report_dir / 'index.html'}")
+        return True
+
+    def _generate_clang_executable_report(self, report_dir: Path, profdata_file: Path, executables: List[Path]) -> bool:
+        """Generate Clang coverage report using executables (fallback method)."""
+        llvm_cov = self.tool_manager.find_tool('llvm-cov')
+        if not llvm_cov:
+            self.logger.error("llvm-cov not found")
+            return False
+
+        try:
+            # Generate HTML report using executables
+            cmd = [llvm_cov, 'show'] + [str(e) for e in executables] + [
+                f'-instr-profile={profdata_file}',
+                '-format=html',
+                f'-output-dir={report_dir}'
+            ]
+
+            self.logger.info(f"Generating HTML coverage report using {len(executables)} executables...")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+
+            if result.returncode == 0:
+                self.logger.success(f"HTML report generated at {report_dir / 'index.html'}")
+                return True
+            else:
+                self.logger.error(f"llvm-cov show failed: {result.stderr}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to generate executable-based Clang report: {e}")
+            return False
+
+    def _create_combined_index(self, report_dir: Path, successful_reports: List[tuple], coverage_data: List[str]) -> None:
+        """Create a combined index.html that links to individual reports."""
+        index_file = report_dir / 'index.html'
+
+        # Parse coverage data to get summary statistics
+        total_functions = 0
+        total_lines = 0
+        covered_functions = 0
+        covered_lines = 0
+
+        for data in coverage_data:
+            lines = data.strip().split('\n')
+            for line in lines:
+                if line.startswith('TOTAL'):
+                    parts = line.split()
+                    if len(parts) >= 10:
+                        try:
+                            # Parse function coverage (e.g., "100.00% (5/5)")
+                            func_part = parts[5]
+                            if '(' in func_part and ')' in func_part:
+                                func_nums = func_part.split('(')[1].split(')')[0].split('/')
+                                covered_functions += int(func_nums[0])
+                                total_functions += int(func_nums[1])
+
+                            # Parse line coverage
+                            line_part = parts[8]
+                            if '(' in line_part and ')' in line_part:
+                                line_nums = line_part.split('(')[1].split(')')[0].split('/')
+                                covered_lines += int(line_nums[0])
+                                total_lines += int(line_nums[1])
+                        except (ValueError, IndexError):
+                            continue
+
+        # Calculate percentages
+        func_percent = (covered_functions / total_functions * 100) if total_functions > 0 else 0
+        line_percent = (covered_lines / total_lines * 100) if total_lines > 0 else 0
+
+        # Create HTML content
+        html_content = f"""<!doctype html>
+<html>
+<head>
+    <meta name='viewport' content='width=device-width,initial-scale=1'>
+    <meta charset='UTF-8'>
+    <title>PyDCov Coverage Report</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #fff; }}
+        .header {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
+        .summary {{ margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; }}
+        .module-list {{ margin: 20px 0; }}
+        .module-item {{ margin: 10px 0; padding: 15px; border: 1px solid #ddd; border-radius: 3px; background-color: #fff; }}
+        .module-item:hover {{ background-color: #f8f9fa; }}
+        .module-item a {{ text-decoration: none; color: #007bff; font-weight: bold; }}
+        .module-item a:hover {{ text-decoration: underline; }}
+        .coverage-good {{ color: #28a745; font-weight: bold; }}
+        .coverage-medium {{ color: #ffc107; font-weight: bold; }}
+        .coverage-poor {{ color: #dc3545; font-weight: bold; }}
+        h1, h2, h3 {{ color: #333; }}
+        .stats {{ display: inline-block; margin-right: 20px; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PyDCov Coverage Report</h1>
+        <p>Generated on {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    </div>
+
+    <div class="summary">
+        <h2>Overall Coverage Summary</h2>
+        <div class="stats">
+            <strong>Function Coverage:</strong>
+            <span class="{'coverage-good' if func_percent >= 80 else 'coverage-medium' if func_percent >= 60 else 'coverage-poor'}">{func_percent:.1f}% ({covered_functions}/{total_functions})</span>
+        </div>
+        <div class="stats">
+            <strong>Line Coverage:</strong>
+            <span class="{'coverage-good' if line_percent >= 80 else 'coverage-medium' if line_percent >= 60 else 'coverage-poor'}">{line_percent:.1f}% ({covered_lines}/{total_lines})</span>
+        </div>
+    </div>
+
+    <div class="module-list">
+        <h2>Module Reports</h2>
+"""
+
+        for module_name, module_dir in successful_reports:
+            html_content += f"""        <div class="module-item">
+            <h3><a href="individual/{module_name}/index.html">{module_name}</a></h3>
+            <p>Click to view detailed coverage report for this module.</p>
+        </div>
+"""
+
+        html_content += """    </div>
+</body>
+</html>"""
+
+        with open(index_file, 'w') as f:
+            f.write(html_content)
+
+        self.logger.debug(f"Created combined index at {index_file}")
+
+    def export_coverage_data(self, format_type: str = 'lcov', output_file: Path = None) -> bool:
+        """
+        Export coverage data to standard formats for external tools.
+
+        Args:
+            format_type: Export format ('lcov', 'json', 'cobertura')
+            output_file: Output file path (optional, will use default if not provided)
+
+        Returns:
+            True if successful, False otherwise
+        """
+        compiler = self.tool_manager.detect_compiler()
+
+        if compiler == 'clang':
+            return self._export_clang_coverage(format_type, output_file)
+        elif compiler == 'gcc':
+            return self._export_gcc_coverage(format_type, output_file)
+        else:
+            self.logger.error(f"Unsupported compiler for export: {compiler}")
+            return False
+
+    def _export_clang_coverage(self, format_type: str, output_file: Path = None) -> bool:
+        """Export Clang coverage data to specified format."""
+        llvm_cov = self.tool_manager.find_tool('llvm-cov')
+        if not llvm_cov:
+            self.logger.error("llvm-cov not found")
+            return False
+
+        profdata_file = self.coverage_dir / 'incremental_merged.profdata'
+        if not profdata_file.exists():
+            self.logger.error(f"Merged profdata file not found: {profdata_file}")
+            return False
+
+        # Find object files with coverage data
+        object_files = []
+        for obj_file in self.build_dir.rglob('*.o'):
+            if 'CMakeFiles' in str(obj_file) and ('CompilerIdC' in str(obj_file) or 'CompilerIdCXX' in str(obj_file)):
+                continue
+            try:
+                test_cmd = [llvm_cov, 'report', f'-instr-profile={profdata_file}', str(obj_file)]
+                result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=30)
+                if result.returncode == 0 and 'TOTAL' in result.stdout:
+                    object_files.append(obj_file)
+            except Exception:
+                continue
+
+        if not object_files:
+            self.logger.error("No object files with coverage data found for export")
+            return False
+
+        # Set default output file if not provided
+        if output_file is None:
+            if format_type == 'lcov':
+                output_file = self.coverage_dir / 'incremental_merged.info'
+            elif format_type == 'json':
+                output_file = self.coverage_dir / 'incremental_merged.json'
+            elif format_type == 'cobertura':
+                output_file = self.coverage_dir / 'incremental_merged.xml'
+            else:
+                self.logger.error(f"Unsupported export format: {format_type}")
+                return False
+
+        try:
+            if format_type == 'lcov':
+                # Export to lcov format
+                cmd = [llvm_cov, 'export'] + [str(obj) for obj in object_files] + [
+                    f'-instr-profile={profdata_file}',
+                    '-format=lcov'
+                ]
+            elif format_type == 'json':
+                # Export to JSON format
+                cmd = [llvm_cov, 'export'] + [str(obj) for obj in object_files] + [
+                    f'-instr-profile={profdata_file}',
+                    '-format=text'
+                ]
+            else:
+                self.logger.error(f"Export format {format_type} not yet implemented for Clang")
+                return False
+
+            self.logger.info(f"Exporting coverage data to {format_type} format...")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+
+            if result.returncode == 0:
+                with open(output_file, 'w') as f:
+                    f.write(result.stdout)
+                self.logger.success(f"Coverage data exported to {output_file}")
+                return True
+            else:
+                self.logger.error(f"llvm-cov export failed: {result.stderr}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to export Clang coverage data: {e}")
+            return False
+
+    def _export_gcc_coverage(self, format_type: str, output_file: Path = None) -> bool:
+        """Export GCC coverage data to specified format."""
+        # For GCC, the .info file is already in lcov format
+        info_file = self.coverage_dir / 'incremental_merged.info'
+
+        if not info_file.exists():
+            self.logger.error(f"GCC coverage info file not found: {info_file}")
+            return False
+
+        if format_type == 'lcov':
+            if output_file is None:
+                output_file = info_file
+            elif output_file != info_file:
+                # Copy the file to the requested location
+                import shutil
+                shutil.copy2(info_file, output_file)
+            self.logger.success(f"GCC coverage data available in lcov format at {output_file}")
+            return True
+        else:
+            self.logger.error(f"Export format {format_type} not yet implemented for GCC")
+            return False
 
     def _generate_clang_library_report(self, report_dir: Path, profdata_file: Path) -> bool:
         """Generate Clang coverage report for library-only projects."""

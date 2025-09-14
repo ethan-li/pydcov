@@ -175,13 +175,18 @@ jobs:
         pydcov merge
         pydcov report
 
+    - name: Export coverage data for external tools
+      run: |
+        # Export coverage data to lcov format for Codecov
+        pydcov export --format lcov
+
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'
+      if: matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v4
       with:
         file: build/coverage/incremental_merged.info
         flags: unittests
-        name: codecov-umbrella
+        name: codecov-umbrella-${{ matrix.compiler }}
         fail_ci_if_error: false
 
     - name: Upload coverage artifacts

@@ -17,6 +17,7 @@ Commands:
     report        - Generate incremental coverage report
     status        - Show incremental coverage status
     clean         - Clean incremental coverage data
+    export        - Export coverage data to standard formats (lcov, json)
     init-cmake    - Initialize CMake integration
 
 Examples:
@@ -28,6 +29,8 @@ Examples:
     pydcov report
     pydcov status
     pydcov clean
+    pydcov export --format lcov
+    pydcov export --format json --output coverage.json
 
     pydcov init-cmake
 """
@@ -140,6 +143,18 @@ def parse_arguments() -> argparse.Namespace:
                                         description='Clean incremental coverage data')
     add_common_arguments(clean_parser)
 
+    export_parser = subparsers.add_parser('export',
+                                         help='Export coverage data to standard formats',
+                                         description='Export coverage data to formats like lcov, json for external tools')
+    export_parser.add_argument('--format', '-f',
+                              choices=['lcov', 'json', 'cobertura'],
+                              default='lcov',
+                              help='Export format (default: lcov)')
+    export_parser.add_argument('--output', '-o',
+                              type=Path,
+                              help='Output file path (optional, uses default if not specified)')
+    add_common_arguments(export_parser)
+
     # Create init-cmake command
     create_init_cmake_parser(subparsers)
 
@@ -166,6 +181,8 @@ def handle_incremental_command(args) -> int:
             success = manager.status()
         elif args.subcommand == 'clean':
             success = manager.clean()
+        elif args.subcommand == 'export':
+            success = manager.file_manager.export_coverage_data(args.format, args.output)
         else:
             print(f"Error: Unknown command: {args.subcommand}")
             return 1
@@ -282,7 +299,7 @@ def main() -> int:
 
     if args.subcommand == 'init-cmake':
         return handle_init_cmake_command(args)
-    elif args.subcommand in ['init', 'add', 'merge', 'report', 'status', 'clean']:
+    elif args.subcommand in ['init', 'add', 'merge', 'report', 'status', 'clean', 'export']:
         return handle_incremental_command(args)
     else:
         print(f"Error: Unknown command: {args.subcommand}")
