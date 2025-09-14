@@ -102,13 +102,12 @@ class CoverageFileManager:
             self.logger.error(f"Failed to collect coverage files: {e}")
             return 0, 0
     
-    def merge_coverage_data(self, compiler: str = None, incremental: bool = True) -> bool:
+    def merge_coverage_data(self, compiler: str = None) -> bool:
         """
         Merge collected coverage data.
 
         Args:
             compiler: Compiler type ('clang' or 'gcc')
-            incremental: Whether this is for incremental coverage (True) or standard coverage (False)
 
         Returns:
             True if successful, False otherwise
@@ -119,14 +118,14 @@ class CoverageFileManager:
         self.coverage_dir.mkdir(parents=True, exist_ok=True)
 
         if compiler == 'clang':
-            return self._merge_clang_data(incremental)
+            return self._merge_clang_data()
         elif compiler == 'gcc':
-            return self._merge_gcc_data(incremental)
+            return self._merge_gcc_data()
         else:
             self.logger.error(f"Unsupported compiler: {compiler}")
             return False
     
-    def _merge_clang_data(self, incremental: bool = True) -> bool:
+    def _merge_clang_data(self) -> bool:
         """Merge Clang coverage data using llvm-profdata."""
         tools = self.tool_manager.get_coverage_tools('clang')
         llvm_profdata = tools.get('llvm_profdata')
@@ -135,18 +134,10 @@ class CoverageFileManager:
             self.logger.error("llvm-profdata not found")
             return False
 
-        if incremental:
-            # Find .profraw files in incremental directory
-            profraw_files = list(self.incremental_dir.glob('*.profraw'))
-            output_file = self.coverage_dir / 'incremental_merged.profdata'
-            source_desc = "incremental directory"
-        else:
-            # For standard coverage, look in build directory and coverage directory
-            profraw_files = list(self.build_dir.rglob('*.profraw'))
-            # Exclude files already in incremental directory
-            profraw_files = [f for f in profraw_files if not str(f).startswith(str(self.incremental_dir))]
-            output_file = self.coverage_dir / 'merged.profdata'
-            source_desc = "build directory"
+        # Find .profraw files in incremental directory
+        profraw_files = list(self.incremental_dir.glob('*.profraw'))
+        output_file = self.coverage_dir / 'incremental_merged.profdata'
+        source_desc = "incremental directory"
 
         if not profraw_files:
             self.logger.warning(f"No .profraw files found in {source_desc}")
@@ -172,7 +163,7 @@ class CoverageFileManager:
             self.logger.error(f"Failed to merge Clang coverage data: {e}")
             return False
     
-    def _merge_gcc_data(self, incremental: bool = True) -> bool:
+    def _merge_gcc_data(self) -> bool:
         """Merge GCC coverage data using lcov."""
         tools = self.tool_manager.get_coverage_tools('gcc')
         lcov = tools.get('lcov')
@@ -181,20 +172,11 @@ class CoverageFileManager:
             self.logger.error("lcov not found")
             return False
 
-        if incremental:
-            # Check for .gcda files in incremental directory
-            gcda_files = list(self.incremental_dir.glob('*.gcda'))
-            output_file = self.coverage_dir / 'incremental_merged.info'
-            source_dir = self.incremental_dir
-            source_desc = "incremental directory"
-        else:
-            # For standard coverage, look in build directory
-            gcda_files = list(self.build_dir.rglob('*.gcda'))
-            # Exclude files already in incremental directory
-            gcda_files = [f for f in gcda_files if not str(f).startswith(str(self.incremental_dir))]
-            output_file = self.coverage_dir / 'merged.info'
-            source_dir = self.build_dir
-            source_desc = "build directory"
+        # Check for .gcda files in incremental directory
+        gcda_files = list(self.incremental_dir.glob('*.gcda'))
+        output_file = self.coverage_dir / 'incremental_merged.info'
+        source_dir = self.incremental_dir
+        source_desc = "incremental directory"
 
         if not gcda_files:
             self.logger.warning(f"No .gcda files found in {source_desc}")
@@ -365,80 +347,9 @@ class CoverageFileManager:
             'compiler': self.tool_manager.detect_compiler()
         }
 
-    def generate_standard_report(self, compiler: str = None, executables: List[Path] = None) -> bool:
-        """
-        Generate standard coverage report (non-incremental).
 
-        Args:
-            compiler: Compiler type
-            executables: List of executable paths for Clang coverage
 
-        Returns:
-            True if successful, False otherwise
-        """
-        if compiler is None:
-            compiler = self.tool_manager.detect_compiler()
 
-        report_dir = self.coverage_dir / 'html'
-        report_dir.mkdir(parents=True, exist_ok=True)
-
-        if compiler == 'clang':
-            return self._generate_clang_standard_report(report_dir, executables)
-        elif compiler == 'gcc':
-            return self._generate_gcc_standard_report(report_dir)
-        else:
-            self.logger.error(f"Unsupported compiler: {compiler}")
-            return False
-
-    def _generate_clang_standard_report(self, report_dir: Path, executables: List[Path] = None) -> bool:
-        """Generate standard Clang coverage report."""
-        llvm_cov = self.tool_manager.find_tool('llvm-cov')
-        if not llvm_cov:
-            self.logger.error("llvm-cov not found")
-            return False
-
-        # Look for merged profdata file
-        profdata_file = self.coverage_dir / 'merged.profdata'
-        if not profdata_file.exists():
-            # Try incremental merged file as fallback
-            profdata_file = self.coverage_dir / 'incremental_merged.profdata'
-            if not profdata_file.exists():
-                self.logger.error("No merged profdata file found")
-                return False
-
-        if not executables:
-            self.logger.warning("No executables found for coverage report")
-            # For library-only projects, try to find object files
-            object_files = list(self.build_dir.rglob('*.o'))
-            if object_files:
-                self.logger.info(f"Found {len(object_files)} object files, attempting coverage report without executables")
-                # Use a different approach for library coverage
-                return self._generate_clang_library_report(report_dir, profdata_file)
-            else:
-                self.logger.error("No executables or object files found for coverage report")
-                return False
-
-        try:
-            # Generate HTML report
-            cmd = [llvm_cov, 'show'] + [str(e) for e in executables] + [
-                f'-instr-profile={profdata_file}',
-                '-format=html',
-                f'-output-dir={report_dir}'
-            ]
-
-            self.logger.info("Generating HTML coverage report...")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-
-            if result.returncode == 0:
-                self.logger.success(f"HTML report generated at {report_dir / 'index.html'}")
-                return True
-            else:
-                self.logger.error(f"llvm-cov show failed: {result.stderr}")
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Failed to generate Clang report: {e}")
-            return False
 
     def _generate_clang_library_report(self, report_dir: Path, profdata_file: Path) -> bool:
         """Generate Clang coverage report for library-only projects."""
@@ -519,40 +430,4 @@ class CoverageFileManager:
             self.logger.error(f"Failed to generate library coverage report: {e}")
             return False
 
-    def _generate_gcc_standard_report(self, report_dir: Path) -> bool:
-        """Generate standard GCC coverage report."""
-        genhtml = self.tool_manager.find_tool('genhtml')
-        if not genhtml:
-            self.logger.error("genhtml not found")
-            return False
 
-        # Look for merged info file
-        info_file = self.coverage_dir / 'merged.info'
-        if not info_file.exists():
-            # Try incremental merged file as fallback
-            info_file = self.coverage_dir / 'incremental_merged.info'
-            if not info_file.exists():
-                self.logger.error("No merged info file found")
-                return False
-
-        try:
-            cmd = [
-                genhtml, str(info_file),
-                '--output-directory', str(report_dir),
-                '--rc', 'branch_coverage=1',
-                '--ignore-errors', 'source,unused'
-            ]
-
-            self.logger.info("Generating HTML coverage report...")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-
-            if result.returncode == 0:
-                self.logger.success(f"HTML report generated at {report_dir / 'index.html'}")
-                return True
-            else:
-                self.logger.error(f"genhtml failed: {result.stderr}")
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Failed to generate GCC report: {e}")
-            return False

@@ -113,7 +113,7 @@ PyDCov can also be used programmatically:
 ```python
 from pydcov import CoverageManager, IncrementalCoverageManager
 
-# Standard coverage workflow
+# Coverage workflow
 manager = CoverageManager()
 success = manager.full_workflow(["python", "-m", "pytest", "tests/"])
 

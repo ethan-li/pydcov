@@ -6,7 +6,6 @@ comprehensive coverage workflow including build, test, and report generation.
 """
 
 import os
-import subprocess
 from pathlib import Path
 from typing import List
 
@@ -173,7 +172,7 @@ class CoverageManager:
         """
         self.logger.step("Generating coverage reports...")
 
-        # Generate standard coverage report using pure Python
+        # Generate coverage report using pure Python
         compiler = self.compiler_detector.detect_compiler()
         executables = self._find_executables()
 
@@ -184,19 +183,19 @@ class CoverageManager:
             self.logger.warning("No coverage files found to generate report")
             return False
 
-        # Merge coverage data (standard mode, not incremental)
-        if not self.file_manager.merge_coverage_data(compiler, incremental=False):
+        # Merge coverage data (incremental mode)
+        if not self.file_manager.merge_coverage_data(compiler):
             self.logger.error("Failed to merge coverage data")
             return False
 
         # Generate report
-        if not self.file_manager.generate_standard_report(compiler, executables):
+        if not self.file_manager.generate_report(compiler, executables):
             self.logger.error("Coverage report generation failed")
             return False
 
         # Check if reports were generated
         coverage_dir = self.path_manager.coverage_dir
-        html_dir = coverage_dir / 'html'
+        html_dir = coverage_dir / 'incremental_report'
 
         if html_dir.exists() and (html_dir / 'index.html').exists():
             self.logger.success(f"Coverage report generated: {html_dir / 'index.html'}")

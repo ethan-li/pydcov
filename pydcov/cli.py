@@ -13,7 +13,7 @@ Usage:
     pydcov --version
 
 Commands:
-    coverage      - Standard coverage workflows
+    coverage      - Coverage workflows
     incremental   - Incremental coverage tracking
     init-cmake    - Initialize CMake integration
     init-template - Create new project from template
@@ -50,8 +50,8 @@ def create_coverage_parser(subparsers):
     """Create coverage command parser."""
     coverage_parser = subparsers.add_parser(
         'coverage',
-        help='Standard coverage workflows',
-        description='Standard coverage collection and reporting workflows'
+        help='Coverage workflows',
+        description='Coverage collection and reporting workflows'
     )
     
     coverage_parser.add_argument(
