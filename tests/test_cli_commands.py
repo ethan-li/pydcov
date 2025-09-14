@@ -51,7 +51,7 @@ class TestCLIBasicCommands:
         result = subprocess.run(['pydcov', 'add', '--help'], capture_output=True, text=True)
         assert result.returncode == 0
         assert 'usage:' in result.stdout
-        assert 'Add coverage data from test run' in result.stdout
+        assert 'Run tests and add coverage data to incremental collection' in result.stdout
 
     def test_init_cmake_help(self):
         """Test init-cmake subcommand help."""
