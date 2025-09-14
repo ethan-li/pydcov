@@ -162,13 +162,29 @@ class IncrementalCoverageManager:
         """
         Generate final comprehensive coverage report.
 
+        Automatically merges coverage data if needed before generating the report.
+
         Returns:
             True if successful, False otherwise
         """
         self.logger.step("Generating final comprehensive coverage report...")
 
-        # Generate report using pure Python
+        # Check if merged data exists, if not, merge automatically
         compiler = self.compiler_detector.detect_compiler()
+        coverage_dir = self.path_manager.coverage_dir
+
+        if compiler == 'clang':
+            merged_file = coverage_dir / 'incremental_merged.profdata'
+        else:  # gcc
+            merged_file = coverage_dir / 'incremental_merged.info'
+
+        if not merged_file.exists():
+            self.logger.info("Merged coverage data not found, merging automatically...")
+            if not self.merge():
+                self.logger.error("Automatic merge failed")
+                return False
+
+        # Generate report using pure Python
         executables = self._find_executables()
 
         if not self.file_manager.generate_report(compiler, executables):

@@ -176,6 +176,7 @@ brew install llvm
   run: |
     pydcov init
     pydcov add make test
+    pydcov merge
     pydcov report
 ```
 
@@ -190,6 +191,7 @@ coverage:
     - make
     - pydcov init
     - pydcov add make test
+    - pydcov merge
     - pydcov report
 ```
 

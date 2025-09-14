@@ -171,6 +171,8 @@ jobs:
 
     - name: Generate coverage report
       run: |
+        # Merge coverage data before generating report
+        pydcov merge
         pydcov report
 
     - name: Upload coverage to Codecov

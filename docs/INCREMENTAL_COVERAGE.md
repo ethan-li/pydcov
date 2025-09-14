@@ -65,9 +65,14 @@ pydcov incremental add "python -m pytest algorithm/tests/test_dynarray.py::test_
 
 ### 4. Generate Final Report
 
-Generate the comprehensive report (merging is automatic):
+Generate the comprehensive report. The merge step is automatic, but can be called explicitly:
 
 ```bash
+# Option 1: Automatic merge (recommended for simple workflows)
+pydcov incremental report
+
+# Option 2: Explicit merge (recommended for CI/CD and complex workflows)
+pydcov incremental merge
 pydcov incremental report
 ```
 

@@ -127,7 +127,7 @@ def parse_arguments() -> argparse.Namespace:
 
     report_parser = subparsers.add_parser('report',
                                          help='Generate incremental coverage report',
-                                         description='Generate incremental coverage report')
+                                         description='Generate incremental coverage report (automatically merges data if needed)')
     add_common_arguments(report_parser)
 
     status_parser = subparsers.add_parser('status',
