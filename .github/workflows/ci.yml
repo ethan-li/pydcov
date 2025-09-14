@@ -162,19 +162,22 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        # Ensure the executable path is correct for tests
-        export PYDCOV_EXECUTABLE="./build/pydcov"
-        python -m pytest examples/algorithm/tests/ examples/statistics/tests/ -v --tb=short
+        # Initialize incremental coverage
+        pydcov init
+
+        # Add coverage data from test runs
+        pydcov add python -m pytest examples/algorithm/tests/ -v --tb=short
+        pydcov add python -m pytest examples/statistics/tests/ -v --tb=short
 
     - name: Generate coverage report
       run: |
-        pydcov coverage report
+        pydcov report
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'gcc'
       uses: codecov/codecov-action@v4
       with:
-        file: build/coverage/coverage.info
+        file: build/coverage/incremental_merged.info
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
