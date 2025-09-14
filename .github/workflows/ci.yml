@@ -301,7 +301,6 @@ jobs:
         cp requirements.txt dist/pydcov-package/
         cp pytest.ini dist/pydcov-package/
         cp EXAMPLES.md dist/pydcov-package/
-        cp CMAKE_TECHNICAL_DOCUMENTATION.md dist/pydcov-package/
         cp pyproject.toml dist/pydcov-package/
         cp MANIFEST.in dist/pydcov-package/
 
