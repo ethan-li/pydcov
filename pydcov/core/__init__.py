@@ -1,15 +1,12 @@
 """
 Core coverage management modules.
 
-This package contains the main coverage management classes:
-- CoverageManager: Standard coverage workflows
+This package contains the incremental coverage management class:
 - IncrementalCoverageManager: Incremental coverage tracking
 """
 
-from .coverage_manager import CoverageManager
 from .incremental_coverage import IncrementalCoverageManager
 
 __all__ = [
-    "CoverageManager",
     "IncrementalCoverageManager"
 ]

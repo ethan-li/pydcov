@@ -11,7 +11,7 @@ The pure Python implementation provides:
 - **Automatic Executable Detection**: No manual registration required
 - **Library Project Support**: Works with library-only projects without executables
 - **Unified Workflows**: Single interface for both GCC and Clang toolchains
-- **Incremental Coverage**: Advanced incremental coverage tracking capabilities
+- **Automatic Incremental Coverage**: All operations use incremental collection by default
 
 ## 📋 Migration Checklist
 
@@ -130,19 +130,28 @@ pydcov coverage test "make test"
 pydcov coverage report
 ```
 
-### Scenario 3: Incremental Coverage
+### Scenario 3: Automatic Incremental Coverage
 
 **Before**: Not available in CMake
 ```bash
 # No incremental coverage support
 ```
 
-**After**: Full incremental coverage support
+**After**: Automatic incremental coverage in all operations
 ```bash
+# Simple workflow - incremental collection happens automatically
+pydcov coverage full "pytest tests/"
+
+# Step-by-step - each step uses incremental collection
+pydcov coverage clean
+pydcov coverage test "pytest tests/unit/"
+pydcov coverage test "pytest tests/integration/"  # Adds to existing data
+pydcov coverage report  # Generates combined report
+
+# Advanced control when needed
 pydcov incremental init
 pydcov incremental add "pytest tests/unit/"
 pydcov incremental add "pytest tests/integration/"
-pydcov incremental merge
 pydcov incremental report
 ```
 
@@ -188,7 +197,7 @@ pydcov coverage report  # New method
 - ✅ Support for library-only projects
 
 ### Long-term Benefits
-- ✅ Access to incremental coverage features
+- ✅ Automatic incremental coverage for all operations
 - ✅ Future enhancements and improvements
 - ✅ Better integration with Python-based CI/CD workflows
 - ✅ Simplified maintenance and debugging

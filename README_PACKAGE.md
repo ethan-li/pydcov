@@ -1,17 +1,17 @@
-# PyDCov - Python-based C/C++ Code Coverage Tools
+# PyDCov - Incremental C/C++ Code Coverage Tools
 
 [![PyPI version](https://badge.fury.io/py/pydcov.svg)](https://badge.fury.io/py/pydcov)
 [![Python Support](https://img.shields.io/pypi/pyversions/pydcov.svg)](https://pypi.org/project/pydcov/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive coverage management system for CMake-based C/C++ projects. PyDCov provides modern Python tools for coverage collection, incremental coverage tracking, and reporting with support for both GCC/gcov and Clang/llvm-cov toolchains.
+A streamlined incremental coverage tracking system for CMake-based C/C++ projects. PyDCov provides modern Python tools for incremental coverage collection and reporting with support for both GCC/gcov and Clang/llvm-cov toolchains, plus CMake integration setup.
 
 ## Features
 
 - **Cross-platform support**: Linux, macOS, Windows
 - **Multiple compiler support**: GCC/gcov and Clang/llvm-cov
 - **CMake integration**: Seamless integration with CMake build systems
-- **Incremental coverage**: Track coverage changes over time
+- **Incremental coverage**: Efficient incremental collection and reporting
 - **Framework-agnostic**: Works with any testing framework (pytest, unittest, custom executables)
 - **Modern Python API**: Clean, well-documented Python interface
 
@@ -70,57 +70,31 @@ Add this line to your root CMakeLists.txt:
 include(cmake/coverage.cmake)
 ```
 
-### 3. Run Coverage
-
-```bash
-# Full coverage workflow
-pydcov coverage full "python -m pytest tests/"
-
-# Or step by step
-pydcov coverage clean
-pydcov coverage build  
-pydcov coverage test "python -m pytest tests/"
-pydcov coverage report
-```
-
-### 4. Incremental Coverage
-
-Track coverage changes over multiple test runs:
+### 3. Run Incremental Coverage
 
 ```bash
 # Initialize incremental tracking
-pydcov incremental init
+pydcov init
 
 # Add coverage data from test runs
-pydcov incremental add "python -m pytest tests/test_module1.py"
-pydcov incremental add "python -m pytest tests/test_module2.py"
+pydcov add python -m pytest tests/test_module1.py
+pydcov add python -m pytest tests/test_module2.py
 
 # Generate combined report
-pydcov incremental report
+pydcov report
 ```
 
 ## Command Reference
 
-### Coverage Commands
-
-```bash
-pydcov coverage clean          # Clean coverage data
-pydcov coverage build          # Build with coverage instrumentation
-pydcov coverage test "cmd"     # Run tests with coverage collection
-pydcov coverage report         # Generate coverage reports
-pydcov coverage full "cmd"     # Complete workflow: clean, build, test, report
-pydcov coverage status         # Show coverage status
-```
-
 ### Incremental Coverage Commands
 
 ```bash
-pydcov incremental init        # Initialize incremental tracking
-pydcov incremental add "cmd"   # Add coverage data from test run
-pydcov incremental merge       # Merge coverage data
-pydcov incremental report      # Generate incremental report
-pydcov incremental status      # Show incremental status
-pydcov incremental clean       # Clean incremental data
+pydcov init                          # Initialize incremental tracking
+pydcov add python -m pytest tests/  # Add coverage data from test run
+pydcov merge                         # Merge coverage data
+pydcov report                        # Generate incremental report
+pydcov status                        # Show incremental status
+pydcov clean                         # Clean incremental data
 ```
 
 ### Utility Commands
@@ -136,18 +110,15 @@ pydcov --help                  # Show help
 PyDCov can also be used programmatically:
 
 ```python
-from pydcov import CoverageManager, IncrementalCoverageManager
+from pydcov import IncrementalCoverageManager
 
-# Coverage workflow
-manager = CoverageManager()
-success = manager.full_workflow(["python", "-m", "pytest", "tests/"])
-
-# Incremental coverage
-incremental = IncrementalCoverageManager()
-incremental.init()
-incremental.add(["python", "-m", "pytest", "tests/module1/"])
-incremental.add(["python", "-m", "pytest", "tests/module2/"])
-incremental.report()
+# Incremental coverage workflow
+manager = IncrementalCoverageManager()
+manager.init()
+manager.add(["python", "-m", "pytest", "tests/module1/"])
+manager.add(["python", "-m", "pytest", "tests/module2/"])
+manager.merge()
+manager.report()
 ```
 
 ## CMake Integration
@@ -158,7 +129,7 @@ PyDCov provides a comprehensive CMake module that automatically:
 - Configures appropriate coverage flags
 - Creates coverage targets (`coverage-clean`, `coverage-report`)
 - Supports both GCC/gcov and Clang/llvm-cov workflows
-- Provides incremental coverage capabilities
+- Integrates with incremental coverage collection
 
 Example CMakeLists.txt:
 
@@ -191,7 +162,9 @@ include(cmake/coverage.cmake)
 add_executable(my_app main.cpp)' > CMakeLists.txt
 
 # Run coverage
-pydcov coverage full "python -m pytest tests/"
+pydcov init
+pydcov add python -m pytest tests/
+pydcov report
 ```
 
 ### Integration with CI/CD
@@ -205,7 +178,10 @@ pydcov coverage full "python -m pytest tests/"
   run: pydcov init-cmake
 
 - name: Run coverage
-  run: pydcov coverage full "python -m pytest tests/"
+  run: |
+    pydcov init
+    pydcov add python -m pytest tests/
+    pydcov report
 ```
 
 ## Troubleshooting

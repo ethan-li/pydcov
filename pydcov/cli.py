@@ -2,37 +2,32 @@
 """
 PyDCov Command Line Interface
 
-Unified command-line interface for PyDCov coverage tools.
-Provides coverage collection, incremental coverage tracking, and reporting
-capabilities for CMake-based C/C++ projects.
+Streamlined command-line interface for PyDCov incremental coverage tracking
+and CMake integration for C/C++ projects.
 
 Usage:
-    pydcov coverage [command] [options]
-    pydcov incremental [command] [options]
+    pydcov [command] [options]
     pydcov --help
     pydcov --version
 
 Commands:
-    coverage      - Coverage workflows
-    incremental   - Incremental coverage tracking
+    init          - Initialize incremental coverage tracking
+    add           - Add coverage data from test run
+    merge         - Merge coverage data
+    report        - Generate incremental coverage report
+    status        - Show incremental coverage status
+    clean         - Clean incremental coverage data
     init-cmake    - Initialize CMake integration
-    init-template - Create new project from template
-    version       - Show version information
-    help          - Show help information
 
 Examples:
-    pydcov coverage full "python -m pytest tests/"
-    pydcov coverage clean
-    pydcov coverage build
-    pydcov coverage test "python -m pytest tests/"
-    pydcov coverage report
-
-    pydcov incremental init
-    pydcov incremental add "python -m pytest tests/"
-    pydcov incremental report
+    pydcov init
+    pydcov add python -m pytest tests/
+    pydcov merge
+    pydcov report
+    pydcov status
+    pydcov clean
 
     pydcov init-cmake
-    pydcov init-template my_project --template basic_cpp
 """
 
 import argparse
@@ -41,93 +36,29 @@ from pathlib import Path
 # No typing imports needed for Python 3.11+ union syntax
 
 from pydcov import __version__
-from pydcov.core.coverage_manager import CoverageManager
 from pydcov.core.incremental_coverage import IncrementalCoverageManager
 from pydcov.utils.logging_config import setup_logging
 
 
-def create_coverage_parser(subparsers):
-    """Create coverage command parser."""
-    coverage_parser = subparsers.add_parser(
-        'coverage',
-        help='Coverage workflows',
-        description='Coverage collection and reporting workflows'
-    )
-    
-    coverage_parser.add_argument(
-        'command',
-        choices=['clean', 'build', 'test', 'report', 'full', 'status'],
-        help='Coverage command to execute'
-    )
-    
-    coverage_parser.add_argument(
-        'test_args',
-        nargs='*',
-        help='Test command arguments (required for test and full commands)'
-    )
-    
-    coverage_parser.add_argument(
+def add_common_arguments(parser):
+    """Add common arguments to a parser."""
+    parser.add_argument(
         '-v', '--verbose',
         action='store_true',
         help='Enable verbose logging'
     )
-    
-    coverage_parser.add_argument(
-        '--no-colors',
-        action='store_true',
-        help='Disable colored output'
-    )
-    
-    coverage_parser.add_argument(
-        '--project-root',
-        type=Path,
-        help='Project root directory (auto-detected if not specified)'
-    )
-    
-    return coverage_parser
 
-
-def create_incremental_parser(subparsers):
-    """Create incremental coverage command parser."""
-    incremental_parser = subparsers.add_parser(
-        'incremental',
-        help='Incremental coverage tracking',
-        description='Incremental coverage collection and tracking workflows'
-    )
-    
-    incremental_parser.add_argument(
-        'command',
-        choices=['init', 'add', 'merge', 'report', 'status', 'clean'],
-        help='Incremental coverage command to execute'
-    )
-    
-    incremental_parser.add_argument(
-        'test_args',
-        nargs='*',
-        help='Test command arguments (required for add command)'
-    )
-    
-    incremental_parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Enable verbose logging'
-    )
-    
-    incremental_parser.add_argument(
+    parser.add_argument(
         '--no-colors',
         action='store_true',
         help='Disable colored output'
     )
 
-
-    
-    incremental_parser.add_argument(
+    parser.add_argument(
         '--project-root',
         type=Path,
         help='Project root directory (auto-detected if not specified)'
     )
-    
-    return incremental_parser
 
 
 def create_init_cmake_parser(subparsers):
@@ -153,127 +84,87 @@ def create_init_cmake_parser(subparsers):
     return init_parser
 
 
-def create_init_template_parser(subparsers):
-    """Create init-template command parser."""
-    template_parser = subparsers.add_parser(
-        'init-template',
-        help='Create new project from template',
-        description='Bootstrap a new C/C++ project with PyDCov coverage support'
-    )
-
-    template_parser.add_argument(
-        'project_name',
-        help='Name of the new project'
-    )
-
-    template_parser.add_argument(
-        '--template',
-        default='basic_cpp',
-        choices=['basic_cpp'],
-        help='Template to use (default: basic_cpp)'
-    )
-
-    template_parser.add_argument(
-        '--output-dir',
-        type=str,
-        help='Output directory (current directory if not specified)'
-    )
-
-    template_parser.add_argument(
-        '--force',
-        action='store_true',
-        help='Overwrite existing directory'
-    )
-
-    return template_parser
-
-
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         prog='pydcov',
-        description='PyDCov - Python-based C/C++ Code Coverage Tools',
+        description='PyDCov - Incremental C/C++ Code Coverage Tools',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
-    
+
     parser.add_argument(
         '--version',
         action='version',
         version=f'PyDCov {__version__}'
     )
-    
+
     subparsers = parser.add_subparsers(
         dest='subcommand',
         help='Available commands',
         metavar='COMMAND'
     )
-    
-    # Create subcommand parsers
-    create_coverage_parser(subparsers)
-    create_incremental_parser(subparsers)
+
+    # Create incremental coverage commands
+    init_parser = subparsers.add_parser('init',
+                                       help='Initialize incremental coverage tracking',
+                                       description='Initialize incremental coverage tracking')
+    add_common_arguments(init_parser)
+
+    add_parser = subparsers.add_parser('add',
+                                      help='Add coverage data from test run',
+                                      description='Add coverage data from test run')
+    add_parser.add_argument('test_args', nargs='*', help='Test command arguments')
+    add_common_arguments(add_parser)
+
+    merge_parser = subparsers.add_parser('merge',
+                                        help='Merge coverage data',
+                                        description='Merge coverage data')
+    add_common_arguments(merge_parser)
+
+    report_parser = subparsers.add_parser('report',
+                                         help='Generate incremental coverage report',
+                                         description='Generate incremental coverage report')
+    add_common_arguments(report_parser)
+
+    status_parser = subparsers.add_parser('status',
+                                         help='Show incremental coverage status',
+                                         description='Show incremental coverage status')
+    add_common_arguments(status_parser)
+
+    clean_parser = subparsers.add_parser('clean',
+                                        help='Clean incremental coverage data',
+                                        description='Clean incremental coverage data')
+    add_common_arguments(clean_parser)
+
+    # Create init-cmake command
     create_init_cmake_parser(subparsers)
-    create_init_template_parser(subparsers)
-    
+
     return parser.parse_args()
 
 
-def handle_coverage_command(args) -> int:
-    """Handle coverage subcommand."""
-    try:
-        manager = CoverageManager(args.project_root)
-        
-        if args.command == 'clean':
-            success = manager.clean()
-        elif args.command == 'build':
-            success = manager.build()
-        elif args.command == 'test':
-            if not args.test_args:
-                print("Error: test command requires test arguments")
-                return 1
-            success = manager.test(args.test_args)
-        elif args.command == 'report':
-            success = manager.report()
-        elif args.command == 'full':
-            if not args.test_args:
-                print("Error: full command requires test arguments")
-                return 1
-            success = manager.full_workflow(args.test_args)
-        elif args.command == 'status':
-            success = manager.status()
-        else:
-            print(f"Error: Unknown coverage command: {args.command}")
-            return 1
-            
-        return 0 if success else 1
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-
-
 def handle_incremental_command(args) -> int:
-    """Handle incremental coverage subcommand."""
+    """Handle incremental coverage command."""
     try:
         manager = IncrementalCoverageManager(args.project_root)
 
-        if args.command == 'init':
+        if args.subcommand == 'init':
             success = manager.init()
-        elif args.command == 'add':
+        elif args.subcommand == 'add':
             if not args.test_args:
                 print("Error: add command requires test arguments")
                 return 1
             success = manager.add(args.test_args)
-        elif args.command == 'merge':
+        elif args.subcommand == 'merge':
             success = manager.merge()
-        elif args.command == 'report':
+        elif args.subcommand == 'report':
             success = manager.report()
-        elif args.command == 'status':
+        elif args.subcommand == 'status':
             success = manager.status()
-        elif args.command == 'clean':
+        elif args.subcommand == 'clean':
             success = manager.clean()
         else:
-            print(f"Error: Unknown incremental command: {args.command}")
+            print(f"Error: Unknown command: {args.subcommand}")
             return 1
 
         return 0 if success else 1
@@ -281,128 +172,6 @@ def handle_incremental_command(args) -> int:
     except Exception as e:
         print(f"Error: {e}")
         return 1
-
-
-def handle_init_template_command(args) -> int:
-    """Handle init-template command."""
-    try:
-        import shutil
-        import importlib.resources
-        import re
-
-        # Handle output directory with robust path resolution
-        if args.output_dir is not None:
-            output_dir = Path(args.output_dir)
-        else:
-            try:
-                output_dir = Path.cwd()
-            except (OSError, RuntimeError) as e:
-                print(f"Error: Cannot determine current working directory: {e}")
-                return 1
-
-        # Ensure output_dir is a valid Path object
-        if not isinstance(output_dir, Path):
-            try:
-                output_dir = Path(output_dir)
-            except (TypeError, ValueError) as e:
-                print(f"Error: Invalid output directory: {e}")
-                return 1
-
-        project_dir = output_dir / args.project_name
-
-        # Check if project directory already exists
-        if project_dir.exists() and not args.force:
-            print(f"Error: Directory {project_dir} already exists. Use --force to overwrite.")
-            return 1
-
-        # Create project directory
-        project_dir.mkdir(parents=True, exist_ok=True)
-
-        # Copy template files
-        try:
-            # Try new importlib.resources API (Python 3.9+)
-            template_files = importlib.resources.files(f'pydcov.templates.{args.template}')
-            copy_template_files_from_traversable(template_files, project_dir, args.project_name)
-
-        except (ImportError, AttributeError):
-            # Fallback for older Python versions
-            import pkg_resources
-            template_dir = Path(pkg_resources.resource_filename('pydcov', f'templates/{args.template}'))
-            copy_template_files(template_dir, project_dir, args.project_name)
-
-        # Copy CMake integration files
-        cmake_dir = project_dir / "cmake"
-        cmake_dir.mkdir(exist_ok=True)
-
-        try:
-            # Try new importlib.resources API (Python 3.9+)
-            cmake_files = importlib.resources.files('pydcov.cmake')
-            copy_cmake_files_from_traversable(cmake_files, cmake_dir)
-
-        except (ImportError, AttributeError):
-            import pkg_resources
-            package_cmake_dir = Path(pkg_resources.resource_filename('pydcov', 'cmake'))
-            for cmake_file in package_cmake_dir.glob('*.cmake'):
-                shutil.copy2(cmake_file, cmake_dir / cmake_file.name)
-            for doc_file in package_cmake_dir.glob('*.md'):
-                shutil.copy2(doc_file, cmake_dir / doc_file.name)
-
-        print(f"✅ Created new project '{args.project_name}' in {project_dir}")
-        print(f"📁 Template: {args.template}")
-        print(f"\nNext steps:")
-        print(f"  cd {args.project_name}")
-        print(f"  mkdir build && cd build")
-        print(f"  cmake ..")
-        print(f"  make")
-        print(f"  pydcov coverage full \"make test\"")
-
-        return 0
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-
-
-def copy_template_files_from_traversable(template_traversable, project_dir: Path, project_name: str):
-    """Copy template files from importlib.resources.Traversable and substitute placeholders."""
-    import shutil
-    from pathlib import Path
-
-    def _copy_traversable_recursive(traversable, dest_base: Path, rel_path: Path = Path()):
-        """Recursively copy files from a Traversable object."""
-        for item in traversable.iterdir():
-            item_dest = dest_base / rel_path / item.name
-
-            if item.is_dir():
-                # Create directory and recurse
-                item_dest.mkdir(parents=True, exist_ok=True)
-                _copy_traversable_recursive(item, dest_base, rel_path / item.name)
-            else:
-                # Copy file with placeholder substitution
-                item_dest.parent.mkdir(parents=True, exist_ok=True)
-
-                try:
-                    # Try to read as text and substitute placeholders
-                    content = item.read_text(encoding='utf-8')
-                    content = content.replace('{{PROJECT_NAME}}', project_name)
-                    item_dest.write_text(content, encoding='utf-8')
-                except (UnicodeDecodeError, AttributeError):
-                    # Binary file or read error, copy as-is
-                    with item.open('rb') as src, open(item_dest, 'wb') as dst:
-                        shutil.copyfileobj(src, dst)
-
-    _copy_traversable_recursive(template_traversable, project_dir)
-
-
-def copy_cmake_files_from_traversable(cmake_traversable, cmake_dir: Path):
-    """Copy CMake files from importlib.resources.Traversable."""
-    import shutil
-
-    for item in cmake_traversable.iterdir():
-        if item.is_file() and (item.name.endswith('.cmake') or item.name.endswith('.md')):
-            dest_file = cmake_dir / item.name
-            with item.open('rb') as src, open(dest_file, 'wb') as dst:
-                shutil.copyfileobj(src, dst)
 
 
 def copy_cmake_files_from_traversable_with_force(cmake_traversable, cmake_dir: Path, force: bool):
@@ -420,29 +189,6 @@ def copy_cmake_files_from_traversable_with_force(cmake_traversable, cmake_dir: P
             with item.open('rb') as src, open(dest_file, 'wb') as dst:
                 shutil.copyfileobj(src, dst)
             print(f"Copied {item.name} to {dest_file}")
-
-
-def copy_template_files(template_dir: Path, project_dir: Path, project_name: str):
-    """Copy template files and substitute placeholders."""
-    import shutil
-
-    for item in template_dir.rglob('*'):
-        if item.is_file():
-            # Calculate relative path
-            rel_path = item.relative_to(template_dir)
-            dest_path = project_dir / rel_path
-
-            # Create parent directories
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # Read file content and substitute placeholders
-            try:
-                content = item.read_text(encoding='utf-8')
-                content = content.replace('{{PROJECT_NAME}}', project_name)
-                dest_path.write_text(content, encoding='utf-8')
-            except UnicodeDecodeError:
-                # Binary file, copy as-is
-                shutil.copy2(item, dest_path)
 
 
 def handle_init_cmake_command(args) -> int:
@@ -519,26 +265,22 @@ def handle_init_cmake_command(args) -> int:
 def main() -> int:
     """Main entry point."""
     args = parse_arguments()
-    
+
     # Setup logging
     level = "DEBUG" if getattr(args, 'verbose', False) else "INFO"
     setup_logging(
         level=level,
         use_colors=not getattr(args, 'no_colors', False)
     )
-    
+
     if not args.subcommand:
         print("Error: No command specified. Use 'pydcov --help' for usage information.")
         return 1
-    
-    if args.subcommand == 'coverage':
-        return handle_coverage_command(args)
-    elif args.subcommand == 'incremental':
-        return handle_incremental_command(args)
-    elif args.subcommand == 'init-cmake':
+
+    if args.subcommand == 'init-cmake':
         return handle_init_cmake_command(args)
-    elif args.subcommand == 'init-template':
-        return handle_init_template_command(args)
+    elif args.subcommand in ['init', 'add', 'merge', 'report', 'status', 'clean']:
+        return handle_incremental_command(args)
     else:
         print(f"Error: Unknown command: {args.subcommand}")
         return 1

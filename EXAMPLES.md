@@ -1,6 +1,6 @@
 # PyDCov Examples and Usage Guide
 
-This document provides comprehensive examples of how to use PyDCov for C/C++ code coverage measurement in various scenarios.
+This document provides comprehensive examples of how to use PyDCov for C/C++ code coverage measurement in various scenarios. PyDCov uses **unified incremental coverage collection** for all operations, providing optimal performance and flexibility without requiring mode selection.
 
 ## 🚀 Quick Start Examples
 
@@ -10,17 +10,20 @@ This document provides comprehensive examples of how to use PyDCov for C/C++ cod
 # Install PyDCov
 pip install pydcov
 
-# Create a new project
-pydcov init-template my_project
-cd my_project
+# Set up CMake integration in existing project
+pydcov init-cmake
+
+# Add to CMakeLists.txt: include(cmake/coverage.cmake)
 
 # Build and test
 mkdir build && cd build
 cmake ..
 make
 
-# Generate coverage report
-pydcov coverage full "make test"
+# Generate coverage report using incremental workflow
+pydcov init
+pydcov add make test
+pydcov report
 ```
 
 ### Adding to Existing Project
@@ -33,47 +36,52 @@ pydcov init-cmake
 # Update CMakeLists.txt to include:
 # include(cmake/coverage.cmake)
 
-# Run coverage analysis
-pydcov coverage full "python -m pytest tests/"
+# Run incremental coverage analysis
+pydcov init
+pydcov add python -m pytest tests/
+pydcov report
 ```
 
 ## 📋 Command Examples
 
-### Coverage Commands
+### Incremental Coverage Commands
 
 ```bash
-# Complete coverage workflow
-pydcov coverage full "python -m pytest tests/"
+# Complete incremental workflow
+pydcov init                          # Initialize tracking
+pydcov add python -m pytest tests/  # Add coverage data
+pydcov report                        # Generate report
 
-# Step-by-step coverage
-pydcov coverage clean          # Clean previous coverage data
-pydcov coverage build          # Build with coverage instrumentation
-pydcov coverage test "make test"  # Run tests with coverage collection
-pydcov coverage report         # Generate coverage reports
+# Step-by-step incremental coverage
+pydcov init                    # Initialize incremental tracking
+pydcov clean                   # Clean previous coverage data (optional)
+pydcov add make test           # Add coverage from test run
+pydcov merge                   # Merge coverage data (optional)
+pydcov report                  # Generate coverage reports
 
 # Check coverage status
-pydcov coverage status
+pydcov status
 ```
 
-### Incremental Coverage
+### Multiple Test Runs
+
+Incremental coverage allows combining data from multiple test runs:
 
 ```bash
-# Initialize incremental tracking
-pydcov incremental init
+# Initialize tracking
+pydcov init
 
-# Add coverage from different test runs
-pydcov incremental add "python -m pytest tests/unit/"
-pydcov incremental add "python -m pytest tests/integration/"
-pydcov incremental add "python -m pytest tests/e2e/"
+# Add coverage from different test suites
+pydcov add python -m pytest tests/unit/        # Add unit test coverage
+pydcov add python -m pytest tests/integration/ # Add integration test coverage
+pydcov add python -m pytest tests/e2e/         # Add end-to-end test coverage
 
-# Generate combined report
-pydcov incremental report
+# Generate combined report from all test runs
+pydcov report
 
-# Check incremental status
-pydcov incremental status
-
-# Clean incremental data
-pydcov incremental clean
+# Check status and clean when done
+pydcov status
+pydcov clean  # Reset for next coverage cycle
 ```
 
 ## 🧪 Testing Framework Examples
@@ -83,44 +91,60 @@ PyDCov works with any testing framework or executable:
 ### With pytest
 
 ```bash
-# Basic pytest usage
-pydcov coverage full "python -m pytest tests/"
+# Basic pytest usage with incremental coverage
+pydcov init
+pydcov add python -m pytest tests/
+pydcov report
 
 # With specific options
-pydcov coverage full "python -m pytest tests/ -v --tb=short"
+pydcov init
+pydcov add python -m pytest tests/ -v --tb=short
+pydcov report
 
-# Test specific modules
-pydcov incremental add "python -m pytest tests/unit/"
-pydcov incremental add "python -m pytest tests/integration/"
+# Test specific modules incrementally
+pydcov init
+pydcov add python -m pytest tests/unit/
+pydcov add python -m pytest tests/integration/
+pydcov report
 ```
 
 ### With unittest
 
 ```bash
 # Standard unittest discovery
-pydcov coverage full "python -m unittest discover tests/"
+pydcov init
+pydcov add python -m unittest discover tests/
+pydcov report
 
 # Specific test modules
-pydcov coverage full "python -m unittest tests.test_calculator"
+pydcov init
+pydcov add python -m unittest tests.test_calculator
+pydcov report
 
 # Incremental with unittest
-pydcov incremental init
-pydcov incremental add "python -m unittest tests.test_basic"
-pydcov incremental add "python -m unittest tests.test_advanced"
-pydcov incremental report
+pydcov init
+pydcov add python -m unittest tests.test_basic
+pydcov add python -m unittest tests.test_advanced
+pydcov report
 ```
 
 ### With CMake/CTest
 
 ```bash
 # Using make test
-pydcov coverage full "make test"
+pydcov init
+pydcov add make test
+pydcov report
 
 # Using ctest directly
-pydcov coverage full "ctest --verbose"
+pydcov init
+pydcov add ctest --verbose
+pydcov report
 
 # With specific test patterns
-pydcov coverage full "ctest -R unit_tests"
+pydcov init
+pydcov add ctest -R unit_tests
+pydcov report
 ```
 
 ### With Custom Test Scripts
@@ -139,60 +163,55 @@ EOF
 chmod +x run_tests.sh
 
 # Use with PyDCov
-pydcov coverage full "./run_tests.sh"
+pydcov init
+pydcov add ./run_tests.sh
+pydcov report
 ```
 
 ### With Other Testing Tools
 
 ```bash
 # Using Google Test
-pydcov coverage full "./build/my_gtest_executable"
+pydcov init
+pydcov add ./build/my_gtest_executable
+pydcov report
 
 # Using Catch2
-pydcov coverage full "./build/my_catch2_tests"
+pydcov init
+pydcov add ./build/my_catch2_tests
+pydcov report
 
 # Using custom executables
-pydcov coverage full "./build/my_custom_test_runner --all"
+pydcov init
+pydcov add ./build/my_custom_test_runner --all
+pydcov report
 ```
 
-## 🏗️ Project Template Examples
+## 🏗️ Project Setup Examples
 
-### Creating New Projects
+### Setting Up Existing Projects
 
 ```bash
-# Create basic C++ project
-pydcov init-template calculator --template basic_cpp
+# Add PyDCov to existing C++ project
+cd my_existing_project
+pydcov init-cmake
 
-# Navigate and build
-cd calculator
+# This creates:
+# cmake/coverage.cmake      # PyDCov integration
+# cmake/COVERAGE_USAGE.md   # Usage documentation
+
+# Update your CMakeLists.txt to include:
+echo "include(cmake/coverage.cmake)" >> CMakeLists.txt
+
+# Build and test with coverage
 mkdir build && cd build
 cmake ..
 make
 
-# Run tests and coverage
-pydcov coverage full "make test"
-```
-
-### Template Structure
-
-The generated project includes:
-
-```
-calculator/
-├── CMakeLists.txt          # Main CMake configuration
-├── cmake/
-│   ├── coverage.cmake      # PyDCov integration
-│   └── COVERAGE_USAGE.md   # Usage documentation
-├── src/                    # Library source code
-│   ├── calculator.hpp
-│   ├── calculator.cpp
-│   └── CMakeLists.txt
-├── app/                    # Application executable
-│   └── main.cpp
-├── tests/                  # Test source code
-│   ├── test_calculator.cpp
-│   └── CMakeLists.txt
-└── README.md               # Project documentation
+# Run incremental coverage
+pydcov init
+pydcov add make test
+pydcov report
 ```
 
 ## 💻 Python API Examples
@@ -200,38 +219,35 @@ calculator/
 ### Using PyDCov Programmatically
 
 ```python
-from pydcov import CoverageManager, IncrementalCoverageManager
+from pydcov import IncrementalCoverageManager
 
-# Basic coverage workflow
-def run_coverage_analysis():
-    manager = CoverageManager()
+# Basic incremental coverage workflow
+def run_incremental_coverage():
+    manager = IncrementalCoverageManager()
 
-    # Clean previous data
-    manager.clean()
-
-    # Build with coverage
-    success = manager.build()
+    # Initialize incremental tracking
+    success = manager.init()
     if not success:
-        print("Build failed!")
+        print("Failed to initialize coverage tracking!")
         return False
 
-    # Run tests
-    success = manager.test(["python", "-m", "pytest", "tests/"])
+    # Add coverage from test run
+    success = manager.add(["python", "-m", "pytest", "tests/"])
     if not success:
-        print("Tests failed!")
+        print("Failed to add coverage data!")
         return False
 
     # Generate report
     success = manager.report()
     if not success:
-        print("Report generation failed!")
+        print("Failed to generate report!")
         return False
 
-    print("Coverage analysis completed successfully!")
+    print("Incremental coverage analysis completed successfully!")
     return True
 
-# Incremental coverage workflow
-def run_incremental_coverage():
+# Advanced incremental coverage with multiple test suites
+def run_multi_suite_coverage():
     manager = IncrementalCoverageManager()
 
     # Initialize incremental tracking
@@ -249,14 +265,21 @@ def run_incremental_coverage():
         if not success:
             print(f"Failed to add coverage for: {' '.join(test_cmd)}")
             return False
+        print(f"Added coverage for: {' '.join(test_cmd)}")
+
+    # Merge coverage data
+    success = manager.merge()
+    if not success:
+        print("Failed to merge coverage data!")
+        return False
 
     # Generate combined report
     success = manager.report()
     if not success:
-        print("Failed to generate incremental report!")
+        print("Failed to generate report!")
         return False
 
-    print("Incremental coverage analysis completed!")
+    print("Multi-suite coverage analysis completed!")
     return True
 
 # Custom project setup
@@ -281,10 +304,22 @@ def setup_project_coverage(project_path):
 
     return result == 0
 
+# Status checking and cleanup
+def check_coverage_status():
+    manager = IncrementalCoverageManager()
+
+    # Check current status
+    manager.status()
+
+    # Clean coverage data when done
+    manager.clean()
+    print("Coverage data cleaned!")
+
 # Run the examples
 if __name__ == "__main__":
-    run_coverage_analysis()
     run_incremental_coverage()
+    run_multi_suite_coverage()
+    check_coverage_status()
 ```
 
 ## 🔧 Advanced Configuration Examples
@@ -349,7 +384,9 @@ export PYDCOV_COVERAGE_FORMAT=xml
 export PYDCOV_PARALLEL_JOBS=4
 
 # Use environment variables
-pydcov coverage full "python -m pytest tests/"
+pydcov init
+pydcov add python -m pytest tests/
+pydcov report
 ```
 
 ## 🚀 CI/CD Integration Examples
@@ -402,12 +439,15 @@ jobs:
           make
 
       - name: Run coverage analysis
-        run: pydcov coverage full "python -m pytest tests/"
+        run: |
+          pydcov init
+          pydcov add python -m pytest tests/
+          pydcov report
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.xml
+          file: ./build/coverage/incremental_merged.info
           flags: ${{ matrix.compiler }}
           name: codecov-${{ matrix.compiler }}
 ```
@@ -436,14 +476,16 @@ coverage:
   script:
     - pydcov init-cmake
     - mkdir build && cd build && cmake .. && make && cd ..
-    - pydcov coverage full "python -m pytest tests/"
+    - pydcov init
+    - pydcov add python -m pytest tests/
+    - pydcov report
   artifacts:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: coverage.xml
+        path: build/coverage/incremental_merged.info
     paths:
-      - coverage_html/
+      - build/coverage/incremental_report/
     expire_in: 1 week
   coverage: '/TOTAL.*\s+(\d+%)$/'
 ```
@@ -475,7 +517,11 @@ pipeline {
 
         stage('Coverage') {
             steps {
-                sh 'pydcov coverage full "python -m pytest tests/"'
+                sh '''
+                    pydcov init
+                    pydcov add python -m pytest tests/
+                    pydcov report
+                '''
             }
             post {
                 always {
@@ -483,7 +529,7 @@ pipeline {
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: 'coverage_html',
+                        reportDir: 'build/coverage/incremental_report',
                         reportFiles: 'index.html',
                         reportName: 'Coverage Report'
                     ])
@@ -498,32 +544,17 @@ pipeline {
 
 ### Example: Calculator Library
 
-This shows how to use PyDCov with a real calculator project:
+This shows how to use PyDCov with an existing calculator project:
 
 ```bash
-# Create the project
-pydcov init-template calculator_lib
-
-# Navigate to project
+# Navigate to your existing project
 cd calculator_lib
 
-# Examine the generated structure
-tree .
-# calculator_lib/
-# ├── CMakeLists.txt
-# ├── cmake/
-# │   ├── coverage.cmake
-# │   └── COVERAGE_USAGE.md
-# ├── src/
-# │   ├── calculator.hpp
-# │   ├── calculator.cpp
-# │   └── CMakeLists.txt
-# ├── app/
-# │   └── main.cpp
-# ├── tests/
-# │   ├── test_calculator.cpp
-# │   └── CMakeLists.txt
-# └── README.md
+# Set up PyDCov integration
+pydcov init-cmake
+
+# Update CMakeLists.txt to include coverage support
+echo "include(cmake/coverage.cmake)" >> CMakeLists.txt
 
 # Build and test
 mkdir build && cd build
@@ -538,12 +569,14 @@ make
 make test
 # Output: All tests passed
 
-# Generate coverage report
+# Generate coverage report using incremental workflow
 cd ..
-pydcov coverage full "make test"
+pydcov init
+pydcov add make test
+pydcov report
 
 # View coverage results
-open coverage_html/index.html
+open build/coverage/incremental_report/index.html
 ```
 
 ### Example: Integration with Existing Project
@@ -563,16 +596,22 @@ mkdir build && cd build
 cmake ..
 make
 
-# Run your existing tests with coverage
+# Run your existing tests with incremental coverage
 cd ..
-pydcov coverage full "python -m pytest tests/"
+pydcov init
+pydcov add python -m pytest tests/
+pydcov report
 # or
-pydcov coverage full "make test"
+pydcov init
+pydcov add make test
+pydcov report
 # or
-pydcov coverage full "./my_custom_test_runner"
+pydcov init
+pydcov add ./my_custom_test_runner
+pydcov report
 
 # View results
-open coverage_html/index.html
+open build/coverage/incremental_report/index.html
 ```
 
 This comprehensive guide demonstrates PyDCov's flexibility and ease of use across different scenarios, from simple projects to complex CI/CD integrations.

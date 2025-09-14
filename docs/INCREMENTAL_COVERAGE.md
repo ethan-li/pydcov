@@ -1,35 +1,54 @@
 # Incremental Coverage Collection
 
-This document describes the Python-based incremental coverage collection system that allows you to accumulate coverage data across multiple test executions and generate comprehensive coverage reports.
+This document describes PyDCov's incremental coverage system. **All `pydcov coverage` commands automatically use incremental collection**, and this document covers both the automatic behavior and advanced explicit control options for accumulating coverage data across multiple test executions.
 
 ## Overview
 
-The incremental coverage system enables you to:
+PyDCov provides two levels of incremental coverage:
 
-- **Preserve coverage data** between multiple test runs instead of overwriting it
-- **Accumulate coverage** from successive test executions
-- **Generate comprehensive reports** that combine all incremental coverage data
-- **Run targeted tests** and build up coverage incrementally
+### Automatic Incremental Collection (Default)
+All `pydcov coverage` commands automatically use incremental collection:
+- **Seamless accumulation** across multiple `pydcov coverage test` runs
+- **No configuration required** - works out of the box
+- **Optimal performance** for most workflows
+
+### Advanced Incremental Control (Explicit)
+For complex workflows requiring explicit control:
+- **Manual initialization** and data management
+- **Fine-grained control** over coverage collection
+- **Advanced reporting options**
 - **Support both GCC/gcov and Clang/llvm-cov** toolchains
 - **Pure Python implementation** with no CMake dependencies for coverage operations
 
 ## Quick Start
 
-### 1. Build with Coverage
-
-First, build your project with coverage instrumentation:
+### Option 1: Automatic Incremental Collection (Recommended)
 
 ```bash
+# Simple workflow - incremental collection happens automatically
+pydcov coverage full "python -m pytest tests/"
+
+# Or step-by-step with automatic incremental collection
+pydcov coverage clean
 pydcov coverage build
+pydcov coverage test "python -m pytest tests/unit/"      # Collects coverage data
+pydcov coverage test "python -m pytest tests/integration/"  # Adds to existing data
+pydcov coverage report  # Generates combined report from all test runs
 ```
 
-### 2. Initialize Incremental Coverage
+### Option 2: Advanced Incremental Control
+
+For complex workflows requiring explicit control:
 
 ```bash
+# 1. Build with coverage instrumentation
+pydcov coverage build
+
+# 2. Initialize incremental coverage
 pydcov incremental init
 ```
 
-### 3. Run Tests Incrementally
+### 3. Run Tests Incrementally (Advanced Control)
 
 Run different test suites or specific tests, accumulating coverage:
 
@@ -60,9 +79,25 @@ Open the comprehensive coverage report:
 open build/coverage/incremental_report/index.html
 ```
 
-## Complete Workflow Example
+## Complete Workflow Examples
 
-### Option 1: Step-by-Step
+### Option 1: Automatic Incremental Collection (Recommended)
+
+```bash
+# Simple one-command workflow
+pydcov coverage full "python -m pytest tests/"
+
+# Step-by-step with automatic incremental collection
+pydcov coverage clean
+pydcov coverage build
+pydcov coverage test "python -m pytest algorithm/tests/"     # Collects coverage
+pydcov coverage test "python -m pytest statistics/tests/"   # Adds to existing data
+pydcov coverage test "python -m pytest tests/integration/"  # Adds to existing data
+pydcov coverage report  # Generates combined report
+pydcov coverage status  # Check status
+```
+
+### Option 2: Advanced Incremental Control
 
 ```bash
 # 1. Build with coverage
@@ -208,13 +243,13 @@ The system uses pure Python for all coverage operations:
 **Problem**: No `.profraw` or `.gcda` files are created during test runs.
 
 **Solution**:
-1. Ensure the project was built with coverage: `python3 coverage_tools/scripts/coverage.py build`
+1. Ensure the project was built with coverage: `pydcov coverage build`
 2. Check that `ENABLE_COVERAGE=ON` in `build/CMakeCache.txt`
 3. Verify executables are linked with coverage libraries
 
 #### Merge Fails
 
-**Problem**: `coverage-incremental-merge` fails with "No files found".
+**Problem**: `pydcov incremental report` fails with "No files found".
 
 **Solution**:
 1. Check that tests actually ran: `pydcov incremental status`

@@ -22,11 +22,10 @@ class TestPackageInstallation:
         # Test main package import
         import pydcov
         assert hasattr(pydcov, '__version__')
-        assert hasattr(pydcov, 'CoverageManager')
         assert hasattr(pydcov, 'IncrementalCoverageManager')
-        
+        assert hasattr(pydcov, 'CompilerDetector')
+
         # Test core module imports
-        from pydcov.core.coverage_manager import CoverageManager
         from pydcov.core.incremental_coverage import IncrementalCoverageManager
         
         # Test utility imports
@@ -44,21 +43,7 @@ class TestPackageInstallation:
         assert len(version) > 0
         assert '.' in version  # Should be semantic version
     
-    def test_coverage_manager_instantiation(self):
-        """Test that CoverageManager can be instantiated."""
-        from pydcov import CoverageManager
-        
-        manager = CoverageManager()
-        assert manager is not None
-        
-        # Test that required methods exist
-        assert hasattr(manager, 'clean')
-        assert hasattr(manager, 'build')
-        assert hasattr(manager, 'test')
-        assert hasattr(manager, 'report')
-        assert hasattr(manager, 'full_workflow')
-        assert hasattr(manager, 'status')
-    
+
     def test_incremental_coverage_manager_instantiation(self):
         """Test that IncrementalCoverageManager can be instantiated."""
         from pydcov import IncrementalCoverageManager
@@ -107,10 +92,8 @@ class TestCLIEntryPoint:
         result = subprocess.run(['pydcov', '--help'], capture_output=True, text=True)
         assert result.returncode == 0, f"pydcov --help failed: {result.stderr}"
         assert 'usage:' in result.stdout
-        assert 'coverage' in result.stdout
         assert 'incremental' in result.stdout
         assert 'init-cmake' in result.stdout
-        assert 'init-template' in result.stdout
 
 
 class TestPackageStructure:
@@ -130,17 +113,8 @@ class TestPackageStructure:
         assert (cmake_dir / 'coverage.cmake').exists(), "coverage.cmake not found"
         assert (cmake_dir / 'COVERAGE_USAGE.md').exists(), "COVERAGE_USAGE.md not found"
         
-        # Test template files exist
-        templates_dir = package_path / 'templates'
-        assert templates_dir.exists(), "templates directory not found in package"
-        
-        basic_cpp_dir = templates_dir / 'basic_cpp'
-        assert basic_cpp_dir.exists(), "basic_cpp template not found"
-        assert (basic_cpp_dir / 'CMakeLists.txt').exists(), "template CMakeLists.txt not found"
-        assert (basic_cpp_dir / 'README.md').exists(), "template README.md not found"
-        assert (basic_cpp_dir / 'src').exists(), "template src directory not found"
-        assert (basic_cpp_dir / 'tests').exists(), "template tests directory not found"
-        assert (basic_cpp_dir / 'app').exists(), "template app directory not found"
+
+
     
     def test_no_unwanted_files(self):
         """Test that unwanted files are not included in package."""
@@ -160,20 +134,7 @@ class TestPackageStructure:
 class TestBasicAPI:
     """Test basic API functionality without requiring external tools."""
     
-    def test_coverage_manager_basic_methods(self):
-        """Test CoverageManager basic method calls."""
-        from pydcov import CoverageManager
-        
-        with tempfile.TemporaryDirectory() as temp_dir:
-            manager = CoverageManager(project_root=Path(temp_dir))
-            
-            # Test status method (should not fail)
-            try:
-                manager.status()
-            except Exception as e:
-                # Status might fail due to missing tools, but shouldn't crash
-                assert "not found" in str(e).lower() or "missing" in str(e).lower()
-    
+
     def test_incremental_manager_basic_methods(self):
         """Test IncrementalCoverageManager basic method calls."""
         from pydcov import IncrementalCoverageManager

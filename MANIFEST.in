@@ -5,9 +5,6 @@ include pyproject.toml
 
 # Include CMake integration files
 recursive-include pydcov/cmake *.cmake *.md
-
-# Include project templates
-recursive-include pydcov/templates *
 # Exclude Python cache files
 global-exclude __pycache__
 global-exclude *.pyc

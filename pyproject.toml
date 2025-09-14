@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pydcov"
 version = "1.0.0"
-description = "Python-based C/C++ code coverage tools for CMake projects"
+description = "Incremental C/C++ code coverage tools for CMake projects"
 readme = "README_PACKAGE.md"
 license = "MIT"
 authors = [
@@ -15,7 +15,7 @@ maintainers = [
     {name = "PyDCov Project", email = "pydcov@example.com"}
 ]
 keywords = [
-    "coverage", "c", "cpp", "cmake", "testing", "gcov", "llvm-cov"
+    "coverage", "incremental", "c", "cpp", "cmake", "testing", "gcov", "llvm-cov"
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -57,7 +57,7 @@ where = ["."]
 include = ["pydcov*"]
 
 [tool.setuptools.package-data]
-pydcov = ["cmake/*.cmake", "cmake/*.md", "templates/**/*"]
+pydcov = ["cmake/*.cmake", "cmake/*.md"]
 
 [tool.black]
 line-length = 88
