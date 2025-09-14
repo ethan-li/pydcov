@@ -21,7 +21,9 @@ Commands:
 
 Examples:
     pydcov init
-    pydcov add python -m pytest tests/
+    pydcov add python -m pytest tests/ -v --tb=short
+    pydcov add python -m unittest discover tests/
+    pydcov add ./run_tests.sh
     pydcov merge
     pydcov report
     pydcov status
@@ -113,8 +115,9 @@ def parse_arguments() -> argparse.Namespace:
 
     add_parser = subparsers.add_parser('add',
                                       help='Add coverage data from test run',
-                                      description='Add coverage data from test run')
-    add_parser.add_argument('test_args', nargs='*', help='Test command arguments')
+                                      description='Run tests and add coverage data to incremental collection')
+    add_parser.add_argument('test_args', nargs=argparse.REMAINDER,
+                           help='Complete test command with all arguments (e.g., python -m pytest tests/ -v)')
     add_common_arguments(add_parser)
 
     merge_parser = subparsers.add_parser('merge',
