@@ -27,12 +27,30 @@
 #   include(cmake/coverage.cmake)
 #   # Optional executable registration (for compatibility):
 #   coverage_add_executable(my_executable)
-#   # Build with coverage: cmake .. -DENABLE_COVERAGE=ON
+#   # Build with coverage: PYDCOV_ENABLE_COVERAGE=1 cmake ..
 #   # Generate reports: pydcov coverage report
 # ==============================================================================
 
-# Coverage option - can be overridden from command line
-option(ENABLE_COVERAGE "Enable code coverage" OFF)
+# Check for coverage environment variable
+# Supports: PYDCOV_ENABLE_COVERAGE=1, PYDCOV_ENABLE_COVERAGE=ON, PYDCOV_ENABLE_COVERAGE=TRUE
+# For backward compatibility, also check legacy ENABLE_COVERAGE option if set
+if(DEFINED ENV{PYDCOV_ENABLE_COVERAGE})
+    string(TOUPPER "$ENV{PYDCOV_ENABLE_COVERAGE}" COVERAGE_ENV_VALUE)
+    if(COVERAGE_ENV_VALUE STREQUAL "1" OR
+       COVERAGE_ENV_VALUE STREQUAL "ON" OR
+       COVERAGE_ENV_VALUE STREQUAL "TRUE" OR
+       COVERAGE_ENV_VALUE STREQUAL "YES")
+        set(ENABLE_COVERAGE ON)
+    else()
+        set(ENABLE_COVERAGE OFF)
+    endif()
+else()
+    # Backward compatibility: check for legacy CMake option
+    option(ENABLE_COVERAGE "Enable code coverage (deprecated: use PYDCOV_ENABLE_COVERAGE environment variable)" OFF)
+    if(ENABLE_COVERAGE)
+        message(STATUS "Note: -DENABLE_COVERAGE is deprecated. Use PYDCOV_ENABLE_COVERAGE=1 environment variable instead.")
+    endif()
+endif()
 
 # ==============================================================================
 # Coverage Executable Registration Functions

@@ -50,14 +50,17 @@ include(cmake/coverage.cmake)
 ```
 
 ```bash
-# Build and coverage
+# Build and coverage (new environment variable approach)
 mkdir build && cd build
-cmake .. -DENABLE_COVERAGE=ON
+PYDCOV_ENABLE_COVERAGE=1 cmake ..
 make
 
 # Use Python commands instead
 pydcov coverage clean
 pydcov coverage report
+
+# Alternative: legacy CMake option (deprecated but still works)
+# cmake .. -DENABLE_COVERAGE=ON
 ```
 
 ### 3. CI/CD Pipeline Migration
@@ -74,6 +77,8 @@ pydcov coverage report
 #### After (GitHub Actions)
 ```yaml
 - name: Generate Coverage Report
+  env:
+    PYDCOV_ENABLE_COVERAGE: 1
   run: |
     pydcov coverage clean
     pydcov coverage report
@@ -90,6 +95,8 @@ coverage:
 #### After (GitLab CI)
 ```yaml
 coverage:
+  variables:
+    PYDCOV_ENABLE_COVERAGE: 1
   script:
     - pydcov coverage report
 ```

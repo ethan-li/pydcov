@@ -10,7 +10,7 @@
 # cmake/coverage.cmake which can be included in any CMake project.
 #
 # Basic build:    cmake .. -DCMAKE_BUILD_TYPE=Release
-# With coverage:  cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+# With coverage:  PYDCOV_ENABLE_COVERAGE=1 cmake .. -DCMAKE_BUILD_TYPE=Debug
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.9.6)
