@@ -127,24 +127,36 @@ jobs:
         fi
         make
 
-    - name: Test template system with coverage build
+    - name: Test CMake integration with coverage build
       run: |
-        # Test that generated templates work with coverage
-        pydcov init-template coverage_test_project --template basic_cpp
+        # Test that CMake integration works with coverage
+        mkdir coverage_test_project
         cd coverage_test_project
+        pydcov init-cmake
+
+        # Create a simple test project
+        echo 'cmake_minimum_required(VERSION 3.10)' > CMakeLists.txt
+        echo 'project(TestProject)' >> CMakeLists.txt
+        echo 'include(cmake/coverage.cmake)' >> CMakeLists.txt
+        echo 'add_executable(test_app main.cpp)' >> CMakeLists.txt
+
+        echo '#include <iostream>' > main.cpp
+        echo 'int main() {' >> main.cpp
+        echo '    std::cout << "Hello, World!" << std::endl;' >> main.cpp
+        echo '    return 0;' >> main.cpp
+        echo '}' >> main.cpp
+
         mkdir build && cd build
 
         # Try to configure with coverage (might fail due to missing tools)
         if cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug; then
           make
-          make test
           echo "Coverage build successful"
         else
           echo "Coverage build failed (likely due to missing coverage tools)"
           # Try regular build instead
           cmake .. -DCMAKE_BUILD_TYPE=Release
           make
-          make test
         fi
         cd ../..
 
@@ -213,20 +225,20 @@ jobs:
 
         # Test imports
         python -c "import pydcov; print('Package imported successfully')"
-        python -c "from pydcov import CoverageManager, IncrementalCoverageManager; print('Core classes imported')"
+        python -c "from pydcov import IncrementalCoverageManager; print('Core classes imported')"
 
-    - name: Test template creation
+    - name: Test CMake integration
       run: |
-        # Test template system
-        pydcov init-template test_wheel_project --template basic_cpp
-        ls -la test_wheel_project/
+        # Test CMake integration system
+        mkdir test_wheel_project
+        cd test_wheel_project
+        pydcov init-cmake
+        ls -la
 
-        # Verify template structure
-        test -f test_wheel_project/CMakeLists.txt
-        test -f test_wheel_project/README.md
-        test -d test_wheel_project/src
-        test -d test_wheel_project/tests
-        test -d test_wheel_project/cmake
+        # Verify CMake integration structure
+        test -d cmake
+        test -f cmake/coverage.cmake
+        test -f cmake/COVERAGE_USAGE.md
 
     - name: Test CMake integration
       run: |
