@@ -7,12 +7,48 @@
 
 A streamlined **pure Python** incremental coverage tracking system for C/C++ projects. PyDCov provides modern Python tools for incremental coverage collection and reporting with support for both GCC/gcov and Clang/llvm-cov toolchains, plus CMake integration setup. **No CMake dependencies required** for coverage operations.
 
+## ✨ Features
+
+- **🐍 Pure Python**: No CMake dependencies for coverage operations
+- **📦 Multiple Distribution Options**: Python package, standalone executables, or source
+- **🔄 Incremental Coverage**: Efficient incremental collection and reporting
+- **🛠️ Framework-Agnostic**: Works with any testing framework (pytest, unittest, custom executables)
+- **🌐 Cross-Platform**: Linux, macOS, Windows support
+- **⚡ Multiple Compilers**: GCC/gcov and Clang/llvm-cov support
+- **🔧 CMake Integration**: Seamless integration with CMake build systems
+- **📊 Modern Python API**: Clean, well-documented Python interface
+
 ## 🚀 Quick Start
 
 ### Installation
 
+### Option 1: Python Package (Recommended)
+
 ```bash
 pip install pydcov
+```
+
+### Option 2: Standalone Executable
+
+Download pre-built standalone executables from the [GitHub Releases](https://github.com/ethan-li/pydcov/releases) page:
+
+- **Linux (x64)**: `pydcov-linux-x64`
+- **macOS (ARM64)**: `pydcov-macos-arm64`
+
+No Python installation required! Simply download, make executable, and run:
+
+```bash
+# Linux/macOS
+chmod +x pydcov-linux-x64  # or pydcov-macos-arm64
+./pydcov-linux-x64 --version
+```
+
+### Option 3: Build Your Own Executable
+
+```bash
+git clone https://github.com/ethan-li/pydcov.git
+cd pydcov
+python build_standalone.py --clean --test
 ```
 
 ### Basic Usage
@@ -332,6 +368,30 @@ pydcov/
 ├── tests/                 # Package tests
 └── pyproject.toml         # Package configuration
 ```
+
+## 🔨 Building Standalone Executables
+
+PyDCov includes a build script for creating standalone executables using PyInstaller:
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Build standalone executable
+python build_standalone.py --clean --test
+
+# The executable will be created in dist/pydcov
+```
+
+### Cross-Platform Building
+
+The GitHub Actions CI automatically builds standalone executables for:
+- Linux (x64)
+- macOS (ARM64)
+
+These are available as artifacts from CI runs and releases.
+
+📖 **See [Standalone Executables Documentation](docs/STANDALONE_EXECUTABLES.md) for detailed information.**
 
 ## 🤝 Contributing
 

@@ -17,9 +17,18 @@ A streamlined incremental coverage tracking system for CMake-based C/C++ project
 
 ## Installation
 
+### Python Package
+
 ```bash
 pip install pydcov
 ```
+
+### Standalone Executables
+
+Pre-built standalone executables are available for Linux and macOS from the [GitHub Releases](https://github.com/ethan-li/pydcov/releases) page. These executables don't require Python to be installed on the target system.
+
+- **Linux (x64)**: `pydcov-linux-x64`
+- **macOS (ARM64)**: `pydcov-macos-arm64`
 
 ### System Requirements
 

@@ -1,6 +1,7 @@
 # Build directories
 build/
 dist/
+*.egg-info/
 
 # Coverage files
 *.gcda

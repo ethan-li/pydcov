@@ -2,6 +2,8 @@
 include README_PACKAGE.md
 include LICENSE
 include pyproject.toml
+include pydcov.spec
+include build_standalone.py
 
 # Include CMake integration files
 recursive-include pydcov/cmake *.cmake *.md

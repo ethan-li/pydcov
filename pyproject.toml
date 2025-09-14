@@ -38,9 +38,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black>=22.0.0",
-    "flake8>=4.0.0", 
+    "flake8>=4.0.0",
     "mypy>=0.900",
     "pytest>=6.0.0",
+    "pyinstaller>=6.0.0",
 ]
 
 [project.urls]
