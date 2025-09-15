@@ -23,15 +23,13 @@ class TestExecutor:
     and custom test commands while maintaining consistent coverage data collection.
     """
     
-    def __init__(self, project_root: str | Path, logger=None):
+    def __init__(self, logger=None):
         """
         Initialize the test executor.
-        
+
         Args:
-            project_root: Path to the project root directory
             logger: Optional logger instance
         """
-        self.project_root = Path(project_root)
         self.logger = logger or setup_logging()
     
     def execute_test_command(
@@ -74,8 +72,8 @@ class TestExecutor:
                 raise ValueError("Test command list cannot be empty. Please specify a test command.")
             cmd = list(test_command)
         
-        # Use project root as default working directory
-        working_dir = Path(cwd) if cwd else self.project_root
+        # Use current working directory as default
+        working_dir = Path(cwd) if cwd else Path.cwd()
         
         try:
             self.logger.info(f"Executing test command: {' '.join(cmd)}")

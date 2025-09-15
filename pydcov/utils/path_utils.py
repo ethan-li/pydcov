@@ -13,39 +13,32 @@ from .logging_config import get_logger
 
 class PathManager:
     """Manages paths and directories for the coverage system."""
-    
-    def __init__(self, project_root: Path | None = None):
+
+    def __init__(self, build_root: Path | None = None):
         self.logger = get_logger()
-        
-        if project_root is None:
-            # Auto-detect project root by looking for CMakeLists.txt
+
+        if build_root is None:
+            # Auto-detect build root by looking for CMakeCache.txt in current directory
             current = Path.cwd()
-            while current != current.parent:
-                if (current / 'CMakeLists.txt').exists():
-                    project_root = current
-                    break
-                current = current.parent
-            
-            if project_root is None:
-                # Fallback to current directory
-                project_root = Path.cwd()
-        
-        self.project_root = Path(project_root).resolve()
-        self.build_dir = self.project_root / 'build'
-        self.coverage_dir = self.build_dir / 'coverage'
-        self.scripts_dir = self.project_root / 'scripts'
-        self.coverage_tools_dir = self.project_root / 'coverage_tools'
-        
-        # Module directories
-        self.algorithm_src_dir = self.project_root / 'algorithm' / 'src'
-        self.statistics_src_dir = self.project_root / 'statistics' / 'src'
-        
-        # Executable paths
-        self.algorithm_cli = self.build_dir / 'algorithm' / 'app' / 'algorithm_cli'
-        self.statistics_cli = self.build_dir / 'statistics' / 'app' / 'statistics_cli'
-        
-        self.logger.debug(f"Project root: {self.project_root}")
-        self.logger.debug(f"Build directory: {self.build_dir}")
+
+            # Check if current directory is a build directory
+            if (current / 'CMakeCache.txt').exists():
+                build_root = current
+            else:
+                raise ValueError(
+                    f"Could not auto-detect CMake build directory. "
+                    f"Current directory '{current}' does not contain CMakeCache.txt. "
+                    f"Please specify --build-root parameter or run from a CMake build directory."
+                )
+
+        self.build_root = Path(build_root).resolve()
+        self.coverage_dir = self.build_root / 'coverage'
+
+        self.logger.debug(f"Build root: {self.build_root}")
+        self.logger.debug(f"Coverage directory: {self.coverage_dir}")
+
+        # Backward compatibility: provide build_dir as alias for build_root
+        self.build_dir = self.build_root
     
     def ensure_coverage_dir(self) -> Path:
         """Ensure coverage directory exists and return its path."""
@@ -66,24 +59,24 @@ class PathManager:
     
     def validate_build_dir(self) -> bool:
         """Check if build directory exists and contains CMake files."""
-        if not self.build_dir.exists():
-            self.logger.error(f"Build directory not found: {self.build_dir}")
+        if not self.build_root.exists():
+            self.logger.error(f"Build directory not found: {self.build_root}")
             return False
-        
-        cmake_cache = self.build_dir / 'CMakeCache.txt'
+
+        cmake_cache = self.build_root / 'CMakeCache.txt'
         if not cmake_cache.exists():
-            self.logger.error(f"CMakeCache.txt not found in {self.build_dir}")
+            self.logger.error(f"CMakeCache.txt not found in {self.build_root}")
             self.logger.error("Please run CMake configuration first")
             return False
-        
+
         return True
     
     def validate_coverage_build(self) -> bool:
         """Check if build was configured with coverage enabled."""
         if not self.validate_build_dir():
             return False
-        
-        cmake_cache = self.build_dir / 'CMakeCache.txt'
+
+        cmake_cache = self.build_root / 'CMakeCache.txt'
         try:
             with open(cmake_cache, 'r') as f:
                 content = f.read()
@@ -100,52 +93,7 @@ class PathManager:
             self.logger.error(f"Failed to read CMakeCache.txt: {e}")
             return False
     
-    def get_source_files(self, module: str | None = None) -> list:
-        """
-        Get list of source files for coverage analysis.
-        
-        Args:
-            module: Specific module ('algorithm' or 'statistics'). 
-                   If None, returns all source files.
-        
-        Returns:
-            List of source file paths
-        """
-        source_files = []
-        
-        if module is None or module == 'algorithm':
-            if self.algorithm_src_dir.exists():
-                source_files.extend(self.algorithm_src_dir.glob('*.c'))
-        
-        if module is None or module == 'statistics':
-            if self.statistics_src_dir.exists():
-                source_files.extend(self.statistics_src_dir.glob('*.c'))
-        
-        return [str(f) for f in source_files]
-    
-    def get_executable_path(self, module: str) -> Path | None:
-        """
-        Get path to module executable.
-        
-        Args:
-            module: Module name ('algorithm' or 'statistics')
-            
-        Returns:
-            Path to executable or None if not found
-        """
-        if module == 'algorithm':
-            exe_path = self.algorithm_cli
-        elif module == 'statistics':
-            exe_path = self.statistics_cli
-        else:
-            self.logger.error(f"Unknown module: {module}")
-            return None
-        
-        if exe_path.exists():
-            return exe_path
-        else:
-            self.logger.warning(f"Executable not found: {exe_path}")
-            return None
+
     
     def clean_coverage_data(self, incremental_only: bool = False):
         """
@@ -168,9 +116,9 @@ class PathManager:
                 shutil.rmtree(self.coverage_dir)
                 self.logger.info("Cleaned all coverage data")
     
-    def relative_to_project(self, path: Path) -> str:
-        """Get path relative to project root."""
+    def relative_to_build(self, path: Path) -> str:
+        """Get path relative to build root."""
         try:
-            return str(path.relative_to(self.project_root))
+            return str(path.relative_to(self.build_root))
         except ValueError:
             return str(path)

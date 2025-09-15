@@ -23,12 +23,19 @@ from pydcov.utils.coverage_file_manager import CoverageFileManager
 class IncrementalCoverageManager:
     """Manages incremental coverage collection and reporting workflows."""
     
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, build_root: Path | None = None):
+        """
+        Initialize IncrementalCoverageManager.
+
+        Args:
+            build_root: Path to CMake build directory. If None, will auto-detect.
+        """
         self.logger = get_logger()
-        self.path_manager = PathManager(project_root)
+        self.path_manager = PathManager(build_root)
         self.cmake_helper = CMakeHelper(self.path_manager)
         self.compiler_detector = CompilerDetector()
-        self.test_executor = TestExecutor(self.path_manager.project_root, self.logger)
+
+        self.test_executor = TestExecutor(self.logger)
 
         # Initialize file manager for pure Python coverage operations
         self.file_manager = CoverageFileManager(
@@ -287,7 +294,7 @@ class IncrementalCoverageManager:
 
         # Add additional information
         status = {
-            'project_root': str(self.path_manager.project_root),
+            'build_root': str(self.path_manager.build_root),
             'compiler': self.compiler_detector.detect_compiler(),
             'incremental_dir_exists': file_status['incremental_dir_exists'],
             'profraw_count': file_status['profraw_count'],

@@ -47,9 +47,17 @@ class TestPackageInstallation:
     def test_incremental_coverage_manager_instantiation(self):
         """Test that IncrementalCoverageManager can be instantiated."""
         from pydcov import IncrementalCoverageManager
-        
-        manager = IncrementalCoverageManager()
-        assert manager is not None
+        import tempfile
+        from pathlib import Path
+
+        # Create a temporary build directory with CMakeCache.txt
+        with tempfile.TemporaryDirectory() as temp_dir:
+            build_dir = Path(temp_dir) / 'build'
+            build_dir.mkdir()
+            (build_dir / 'CMakeCache.txt').touch()
+
+            manager = IncrementalCoverageManager(build_root=build_dir)
+            assert manager is not None
         
         # Test that required methods exist
         assert hasattr(manager, 'init')
@@ -140,7 +148,8 @@ class TestBasicAPI:
         from pydcov import IncrementalCoverageManager
         
         with tempfile.TemporaryDirectory() as temp_dir:
-            manager = IncrementalCoverageManager(project_root=Path(temp_dir))
+            build_dir = Path(temp_dir) / 'build'
+            manager = IncrementalCoverageManager(build_root=build_dir)
             
             # Test status method (should not fail)
             try:

@@ -60,9 +60,9 @@ def add_common_arguments(parser):
     )
 
     parser.add_argument(
-        '--project-root',
+        '--build-root',
         type=Path,
-        help='Project root directory (auto-detected if not specified)'
+        help='CMake build directory (auto-detected if not specified)'
     )
 
 
@@ -164,7 +164,8 @@ def parse_arguments() -> argparse.Namespace:
 def handle_incremental_command(args) -> int:
     """Handle incremental coverage command."""
     try:
-        manager = IncrementalCoverageManager(args.project_root)
+        build_root = getattr(args, 'build_root', None)
+        manager = IncrementalCoverageManager(build_root=build_root)
 
         if args.subcommand == 'init':
             success = manager.init()

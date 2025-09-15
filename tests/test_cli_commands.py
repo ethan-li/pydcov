@@ -154,8 +154,9 @@ class TestIncrementalStatusCommand:
     def test_status_basic(self):
         """Test basic status command."""
         with tempfile.TemporaryDirectory() as temp_dir:
+            build_dir = Path(temp_dir) / 'build'
             result = subprocess.run(
-                ['pydcov', 'status', '--project-root', temp_dir],
+                ['pydcov', 'status', '--build-root', str(build_dir)],
                 capture_output=True, text=True
             )
 
@@ -170,8 +171,9 @@ class TestCLIVerboseMode:
     def test_status_verbose(self):
         """Test status command with verbose flag."""
         with tempfile.TemporaryDirectory() as temp_dir:
+            build_dir = Path(temp_dir) / 'build'
             result = subprocess.run(
-                ['pydcov', 'status', '--verbose', '--project-root', temp_dir],
+                ['pydcov', 'status', '--verbose', '--build-root', str(build_dir)],
                 capture_output=True, text=True
             )
 
