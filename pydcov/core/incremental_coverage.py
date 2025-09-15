@@ -18,20 +18,38 @@ from pydcov.utils.path_utils import PathManager
 from pydcov.utils.cmake_integration import CMakeHelper
 from pydcov.utils.test_executor import TestExecutor
 from pydcov.utils.coverage_file_manager import CoverageFileManager
+from pydcov.utils.config import PyDCovConfig
 
 
 class IncrementalCoverageManager:
     """Manages incremental coverage collection and reporting workflows."""
-    
-    def __init__(self, build_root: Path | None = None):
+
+    def __init__(self, build_root: Path | None = None, is_init_command: bool = False):
         """
         Initialize IncrementalCoverageManager.
 
         Args:
-            build_root: Path to CMake build directory. If None, will auto-detect.
+            build_root: Path to CMake build directory. If None, will try to load from config or auto-detect.
+            is_init_command: True if this is being called from the init command
         """
         self.logger = get_logger()
-        self.path_manager = PathManager(build_root)
+        self.config = PyDCovConfig()
+
+        # For init command, use provided build_root or auto-detect
+        # For other commands, try to load from config first
+        if is_init_command:
+            resolved_build_root = build_root
+        else:
+            # Try to load from config first
+            resolved_build_root = self.config.get_build_root()
+            if resolved_build_root is None and build_root is not None:
+                # Fallback to provided build_root (for backward compatibility)
+                resolved_build_root = build_root
+            elif resolved_build_root is None:
+                # No config found and no build_root provided - let PathManager handle auto-detection
+                resolved_build_root = None
+
+        self.path_manager = PathManager(resolved_build_root)
         self.cmake_helper = CMakeHelper(self.path_manager)
         self.compiler_detector = CompilerDetector()
 
@@ -65,9 +83,17 @@ class IncrementalCoverageManager:
         """
         self.logger.step("Initializing incremental coverage collection...")
 
+        # Save build root to configuration for future commands first
+        if not self.config.set_build_root(self.path_manager.build_root):
+            self.logger.warning("Failed to save build root configuration")
+        else:
+            self.logger.info(f"Build root saved to configuration: {self.path_manager.build_root}")
+
         # Ensure proper CMake configuration
         if not self.cmake_helper.ensure_build_configured():
-            return False
+            self.logger.warning("CMake configuration failed, but build root has been saved")
+            # Don't return False here - we still want to initialize incremental coverage
+            # if the build directory exists and has CMakeCache.txt
 
         # Initialize incremental coverage using pure Python
         if not self.file_manager.init_incremental():
@@ -212,7 +238,12 @@ class IncrementalCoverageManager:
 
     def _find_executables(self) -> List[Path]:
         """
-        Find executable files for coverage reporting.
+        Find executable files for coverage reporting by analyzing CMake build directory.
+
+        This method uses multiple strategies to detect executables generically:
+        1. Parse CMake TargetDirectories.txt to find executable targets
+        2. Use 'make help' to get available targets and filter executables
+        3. Scan filesystem for executable files with proper filtering
 
         Returns:
             List of executable paths
@@ -223,25 +254,197 @@ class IncrementalCoverageManager:
         if not build_dir.exists():
             return executables
 
-        # First check specific known locations
-        known_executables = [
-            self.path_manager.algorithm_cli,
-            self.path_manager.statistics_cli
-        ]
+        # Strategy 1: Parse CMake TargetDirectories.txt to find executable targets
+        cmake_executables = self._find_executables_from_cmake_targets()
+        if cmake_executables:
+            executables.extend(cmake_executables)
+            self.logger.debug(f"Found {len(cmake_executables)} executables from CMake targets")
 
-        for exe_path in known_executables:
-            if exe_path.exists():
-                executables.append(exe_path)
-
-        # If no known executables found, look for common patterns
+        # Strategy 2: Use make help to find executable targets
         if not executables:
-            for pattern in ['*_cli', '*_app', '*_test']:
-                for exe_file in build_dir.rglob(pattern):
-                    # Skip CMake temporary files
-                    if 'CMakeFiles' in str(exe_file):
+            make_executables = self._find_executables_from_make_targets()
+            if make_executables:
+                executables.extend(make_executables)
+                self.logger.debug(f"Found {len(make_executables)} executables from make targets")
+
+        # Strategy 3: Fallback to filesystem scan with intelligent filtering
+        if not executables:
+            fs_executables = self._find_executables_from_filesystem()
+            if fs_executables:
+                executables.extend(fs_executables)
+                self.logger.debug(f"Found {len(fs_executables)} executables from filesystem scan")
+
+        # Remove duplicates while preserving order
+        unique_executables = []
+        seen = set()
+        for exe in executables:
+            if exe not in seen:
+                unique_executables.append(exe)
+                seen.add(exe)
+
+        if unique_executables:
+            self.logger.info(f"Found {len(unique_executables)} executable(s) for coverage analysis")
+            for exe in unique_executables:
+                self.logger.debug(f"  - {exe.relative_to(build_dir)}")
+        else:
+            self.logger.warning("No executables found for coverage analysis")
+
+        return unique_executables
+
+    def _find_executables_from_cmake_targets(self) -> List[Path]:
+        """
+        Find executables by parsing CMake TargetDirectories.txt file.
+
+        Returns:
+            List of executable paths found from CMake targets
+        """
+        executables = []
+        build_dir = self.path_manager.build_dir
+        target_dirs_file = build_dir / 'CMakeFiles' / 'TargetDirectories.txt'
+
+        if not target_dirs_file.exists():
+            return executables
+
+        try:
+            with open(target_dirs_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or '/CMakeFiles/' not in line:
                         continue
-                    if exe_file.is_file() and os.access(exe_file, os.X_OK):
-                        executables.append(exe_file)
+
+                    # Extract target name from path like:
+                    # /path/to/build/examples/algorithm/app/CMakeFiles/algorithm_cli.dir
+                    if line.endswith('.dir'):
+                        target_name = Path(line).name[:-4]  # Remove .dir suffix
+
+                        # Skip system targets
+                        if target_name in ['test', 'edit_cache', 'rebuild_cache',
+                                         'list_install_components', 'install', 'local', 'strip']:
+                            continue
+
+                        # Find the actual executable file
+                        target_dir = Path(line).parent.parent  # Go up from CMakeFiles/target.dir
+                        exe_path = target_dir / target_name
+
+                        if exe_path.exists() and exe_path.is_file() and os.access(exe_path, os.X_OK):
+                            executables.append(exe_path)
+
+        except Exception as e:
+            self.logger.debug(f"Failed to parse CMake targets: {e}")
+
+        return executables
+
+    def _find_executables_from_make_targets(self) -> List[Path]:
+        """
+        Find executables by querying make targets.
+
+        Returns:
+            List of executable paths found from make targets
+        """
+        executables = []
+        build_dir = self.path_manager.build_dir
+
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['make', 'help'],
+                cwd=build_dir,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                return executables
+
+            # Parse make help output to find potential executable targets
+            for line in result.stdout.split('\n'):
+                if line.startswith('...') and not line.startswith('The following'):
+                    # Format is "... target_name (description)"
+                    target_part = line[3:].strip()  # Remove "..." prefix
+                    if ' ' in target_part:
+                        target = target_part.split(' ')[0].strip()
+                    else:
+                        target = target_part.strip()
+
+                    # Skip system targets
+                    if target in ['all', 'clean', 'depend', 'edit_cache', 'install',
+                                'install/local', 'install/strip', 'list_install_components',
+                                'rebuild_cache', 'test']:
+                        continue
+
+                    # Look for the executable file in the build directory
+                    for exe_path in build_dir.rglob(target):
+                        if (exe_path.is_file() and
+                            os.access(exe_path, os.X_OK) and
+                            'CMakeFiles' not in str(exe_path)):
+                            executables.append(exe_path)
+                            break  # Only take the first match
+
+        except Exception as e:
+            self.logger.debug(f"Failed to query make targets: {e}")
+
+        return executables
+
+    def _find_executables_from_filesystem(self) -> List[Path]:
+        """
+        Find executables by scanning the filesystem with intelligent filtering.
+
+        Returns:
+            List of executable paths found from filesystem scan
+        """
+        executables = []
+        build_dir = self.path_manager.build_dir
+
+        # Common executable patterns to look for
+        patterns = ['*_cli', '*_app', '*_test', '*_main', '*_demo', '*_example']
+
+        for pattern in patterns:
+            for exe_file in build_dir.rglob(pattern):
+                # Skip CMake temporary files and directories
+                if 'CMakeFiles' in str(exe_file):
+                    continue
+
+                # Skip if it's a directory
+                if not exe_file.is_file():
+                    continue
+
+                # Check if it's executable
+                if not os.access(exe_file, os.X_OK):
+                    continue
+
+                # Skip common non-executable files
+                if exe_file.suffix in ['.txt', '.cmake', '.log', '.json', '.xml']:
+                    continue
+
+                executables.append(exe_file)
+
+        # If no pattern-based executables found, do a broader search
+        if not executables:
+            for exe_file in build_dir.rglob('*'):
+                # Skip CMake temporary files and directories
+                if 'CMakeFiles' in str(exe_file):
+                    continue
+
+                # Skip if it's a directory
+                if not exe_file.is_file():
+                    continue
+
+                # Check if it's executable
+                if not os.access(exe_file, os.X_OK):
+                    continue
+
+                # Skip files with common non-executable extensions
+                if exe_file.suffix in ['.txt', '.cmake', '.log', '.json', '.xml',
+                                     '.a', '.so', '.dylib', '.o', '.obj', '.gcno',
+                                     '.gcda', '.profraw', '.profdata']:
+                    continue
+
+                # Skip files that are clearly not executables
+                if exe_file.name in ['Makefile', 'cmake_install.cmake']:
+                    continue
+
+                executables.append(exe_file)
 
         return executables
 
@@ -278,6 +481,13 @@ class IncrementalCoverageManager:
         if report_dir.exists():
             shutil.rmtree(report_dir)
             self.logger.info("Removed incremental report directory")
+
+        # Also remove configuration file
+        if self.config.config_exists():
+            if self.config.remove_config():
+                self.logger.info("Configuration file removed")
+            else:
+                self.logger.warning("Failed to remove configuration file")
 
         self.logger.success("Incremental coverage data cleaned")
         return True

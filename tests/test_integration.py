@@ -99,9 +99,20 @@ class TestIncrementalCoverageIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Test status in empty directory
             build_dir = Path(temp_dir) / 'build'
+            build_dir.mkdir(parents=True)
+            (build_dir / 'CMakeCache.txt').touch()
+
+            # First initialize to set up configuration using Python script directly
+            import sys
+            pydcov_script = Path(__file__).parent.parent / 'pydcov' / 'cli.py'
+            init_result = subprocess.run([
+                sys.executable, str(pydcov_script), 'init', '--build-root', str(build_dir)
+            ], capture_output=True, text=True, cwd=temp_dir)
+
+            # Now test status command without --build-root
             result = subprocess.run([
-                'pydcov', 'status', '--build-root', str(build_dir)
-            ], capture_output=True, text=True)
+                sys.executable, str(pydcov_script), 'status'
+            ], capture_output=True, text=True, cwd=temp_dir)
 
             # Should run without crashing (might detect missing tools)
             assert 'Detected compiler:' in result.stdout or 'not found' in result.stderr.lower()
@@ -127,13 +138,14 @@ class TestErrorRecovery:
     def test_incremental_commands_without_cmake_project(self):
         """Test incremental commands in directory without CMake project."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Try status in empty directory
-            build_dir = Path(temp_dir) / 'build'
+            # Try status in empty directory without configuration using Python script directly
+            import sys
+            pydcov_script = Path(__file__).parent.parent / 'pydcov' / 'cli.py'
             result = subprocess.run([
-                'pydcov', 'status', '--build-root', str(build_dir)
-            ], capture_output=True, text=True)
+                sys.executable, str(pydcov_script), 'status'
+            ], capture_output=True, text=True, cwd=temp_dir)
 
-            # Should handle gracefully (might warn about missing tools)
+            # Should handle gracefully (might warn about missing configuration)
             # Exact behavior depends on implementation
             assert result.returncode in [0, 1]  # Should not crash
 

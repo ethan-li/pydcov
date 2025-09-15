@@ -11,7 +11,7 @@ Usage:
     pydcov --version
 
 Commands:
-    init          - Initialize incremental coverage tracking
+    init          - Initialize incremental coverage tracking (requires --build-root)
     add           - Add coverage data from test run
     merge         - Merge coverage data
     report        - Generate incremental coverage report
@@ -21,7 +21,10 @@ Commands:
     init-cmake    - Initialize CMake integration
 
 Examples:
-    pydcov init
+    # Initialize with build directory (only required once)
+    pydcov init --build-root build
+
+    # All subsequent commands use stored configuration
     pydcov add python -m pytest tests/ -v --tb=short
     pydcov add python -m unittest discover tests/
     pydcov add ./run_tests.sh
@@ -32,6 +35,7 @@ Examples:
     pydcov export --format lcov
     pydcov export --format json --output coverage.json
 
+    # CMake integration (independent of build root)
     pydcov init-cmake
 """
 
@@ -59,6 +63,9 @@ def add_common_arguments(parser):
         help='Disable colored output'
     )
 
+
+def add_init_arguments(parser):
+    """Add arguments specific to the init command."""
     parser.add_argument(
         '--build-root',
         type=Path,
@@ -113,8 +120,9 @@ def parse_arguments() -> argparse.Namespace:
     # Create incremental coverage commands
     init_parser = subparsers.add_parser('init',
                                        help='Initialize incremental coverage tracking',
-                                       description='Initialize incremental coverage tracking')
+                                       description='Initialize incremental coverage tracking and save build root configuration for subsequent commands')
     add_common_arguments(init_parser)
+    add_init_arguments(init_parser)
 
     add_parser = subparsers.add_parser('add',
                                       help='Add coverage data from test run',
@@ -164,8 +172,9 @@ def parse_arguments() -> argparse.Namespace:
 def handle_incremental_command(args) -> int:
     """Handle incremental coverage command."""
     try:
+        is_init_command = args.subcommand == 'init'
         build_root = getattr(args, 'build_root', None)
-        manager = IncrementalCoverageManager(build_root=build_root)
+        manager = IncrementalCoverageManager(build_root=build_root, is_init_command=is_init_command)
 
         if args.subcommand == 'init':
             success = manager.init()

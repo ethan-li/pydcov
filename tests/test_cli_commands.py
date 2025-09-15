@@ -155,9 +155,21 @@ class TestIncrementalStatusCommand:
         """Test basic status command."""
         with tempfile.TemporaryDirectory() as temp_dir:
             build_dir = Path(temp_dir) / 'build'
+            build_dir.mkdir(parents=True)
+            (build_dir / 'CMakeCache.txt').touch()
+
+            # First initialize to set up configuration using Python script directly
+            import sys
+            pydcov_script = Path(__file__).parent.parent / 'pydcov' / 'cli.py'
+            init_result = subprocess.run(
+                [sys.executable, str(pydcov_script), 'init', '--build-root', str(build_dir)],
+                capture_output=True, text=True, cwd=temp_dir
+            )
+
+            # Now test status command without --build-root
             result = subprocess.run(
-                ['pydcov', 'status', '--build-root', str(build_dir)],
-                capture_output=True, text=True
+                [sys.executable, str(pydcov_script), 'status'],
+                capture_output=True, text=True, cwd=temp_dir
             )
 
             # Status command should run (might detect missing tools)
@@ -172,9 +184,21 @@ class TestCLIVerboseMode:
         """Test status command with verbose flag."""
         with tempfile.TemporaryDirectory() as temp_dir:
             build_dir = Path(temp_dir) / 'build'
+            build_dir.mkdir(parents=True)
+            (build_dir / 'CMakeCache.txt').touch()
+
+            # First initialize to set up configuration using Python script directly
+            import sys
+            pydcov_script = Path(__file__).parent.parent / 'pydcov' / 'cli.py'
+            init_result = subprocess.run(
+                [sys.executable, str(pydcov_script), 'init', '--build-root', str(build_dir)],
+                capture_output=True, text=True, cwd=temp_dir
+            )
+
+            # Now test status command with verbose flag but without --build-root
             result = subprocess.run(
-                ['pydcov', 'status', '--verbose', '--build-root', str(build_dir)],
-                capture_output=True, text=True
+                [sys.executable, str(pydcov_script), 'status', '--verbose'],
+                capture_output=True, text=True, cwd=temp_dir
             )
 
             # Verbose mode should provide more output

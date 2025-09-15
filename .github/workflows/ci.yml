@@ -162,22 +162,22 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        # Initialize incremental coverage
-        pydcov init
+        # Initialize incremental coverage (specify build directory)
+        pydcov init --build-root build
 
-        # Add coverage data from test runs
+        # Add coverage data from test runs (no --build-root needed after init)
         pydcov add python -m pytest examples/algorithm/tests/ -v --tb=short
         pydcov add python -m pytest examples/statistics/tests/ -v --tb=short
 
     - name: Generate coverage report
       run: |
-        # Merge coverage data before generating report
+        # Merge coverage data before generating report (no --build-root needed after init)
         pydcov merge
         pydcov report
 
     - name: Export coverage data for external tools
       run: |
-        # Export coverage data to lcov format for Codecov
+        # Export coverage data to lcov format for Codecov (no --build-root needed after init)
         pydcov export --format lcov
 
     - name: Upload coverage to Codecov

@@ -54,10 +54,10 @@ python build_standalone.py --clean --test
 ### Basic Usage
 
 ```bash
-# Initialize incremental coverage tracking
-pydcov init
+# Initialize incremental coverage tracking (specify build directory once)
+pydcov init --build-root build
 
-# Add coverage data from test runs
+# Add coverage data from test runs (no --build-root needed after init)
 pydcov add python -m pytest tests/
 
 # Generate coverage report
@@ -281,10 +281,10 @@ jobs:
 PyDCov provides efficient incremental coverage collection for optimal performance:
 
 ```bash
-# Initialize tracking
-pydcov init
+# Initialize tracking (specify build directory once)
+pydcov init --build-root build
 
-# Add coverage from multiple test runs
+# Add coverage from multiple test runs (no --build-root needed)
 pydcov add python -m pytest tests/module1/
 pydcov add python -m pytest tests/module2/
 
