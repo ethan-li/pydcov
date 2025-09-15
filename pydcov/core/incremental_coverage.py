@@ -103,7 +103,7 @@ class IncrementalCoverageManager:
         self.logger.success("Incremental coverage initialized")
         return True
     
-    def add(self, test_command: str | List[str]) -> bool:
+    def add(self, test_command: str | List[str], timeout: int = None) -> bool:
         """
         Run tests and add coverage data to incremental collection.
 
@@ -113,6 +113,7 @@ class IncrementalCoverageManager:
                          - "python -m pytest tests/"
                          - ["python", "-m", "unittest", "discover"]
                          - "./run_tests.sh"
+            timeout: Timeout in seconds for test execution (default: None, no timeout)
 
         Returns:
             True if successful, False otherwise
@@ -144,7 +145,7 @@ class IncrementalCoverageManager:
         if not self.test_executor.execute_test_command(
             parsed_command,
             env=env,
-            timeout=600
+            timeout=timeout
         ):
             return False
 

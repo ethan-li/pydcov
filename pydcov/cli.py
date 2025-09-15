@@ -28,6 +28,7 @@ Examples:
     pydcov add python -m pytest tests/ -v --tb=short
     pydcov add python -m unittest discover tests/
     pydcov add ./run_tests.sh
+    pydcov add --timeout 1200 python -m pytest tests/slow/  # Custom timeout
     pydcov merge
     pydcov report
     pydcov status
@@ -129,6 +130,8 @@ def parse_arguments() -> argparse.Namespace:
                                       description='Run tests and add coverage data to incremental collection')
     add_parser.add_argument('test_args', nargs=argparse.REMAINDER,
                            help='Complete test command with all arguments (e.g., python -m pytest tests/ -v)')
+    add_parser.add_argument('--timeout', type=int, default=None,
+                           help='Timeout in seconds for test execution (default: 600)')
     add_common_arguments(add_parser)
 
     merge_parser = subparsers.add_parser('merge',
@@ -182,7 +185,7 @@ def handle_incremental_command(args) -> int:
             if not args.test_args:
                 print("Error: add command requires test arguments")
                 return 1
-            success = manager.add(args.test_args)
+            success = manager.add(args.test_args, timeout=args.timeout)
         elif args.subcommand == 'merge':
             success = manager.merge()
         elif args.subcommand == 'report':

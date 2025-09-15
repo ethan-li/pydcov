@@ -308,6 +308,9 @@ pydcov add ./my_test_runner --verbose
 
 # With shell scripts
 pydcov add bash run_all_tests.sh
+
+# With custom timeout for long-running tests
+pydcov add --timeout 1800 python -m pytest tests/slow/
 ```
 
 ### Multiple Output Formats
