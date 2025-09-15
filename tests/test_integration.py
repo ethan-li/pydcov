@@ -98,8 +98,9 @@ class TestIncrementalCoverageIntegration:
         """Test basic incremental status command."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Test status in empty directory
+            build_dir = Path(temp_dir) / 'build'
             result = subprocess.run([
-                'pydcov', 'status', '--project-root', temp_dir
+                'pydcov', 'status', '--build-root', str(build_dir)
             ], capture_output=True, text=True)
 
             # Should run without crashing (might detect missing tools)
