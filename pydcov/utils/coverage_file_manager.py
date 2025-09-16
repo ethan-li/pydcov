@@ -162,14 +162,20 @@ class CoverageFileManager:
 
         output_file = self.pydcov_dir / 'merged.profdata'
 
+        # Report summary of subdirectory processing
         if subdirs_without_files:
-            self.logger.warning(f"No .profraw files found in {len(subdirs_without_files)} subdirectories: {', '.join(subdirs_without_files)}")
+            self.logger.info(f"Skipped {len(subdirs_without_files)} subdirectories with no .profraw files: {', '.join(subdirs_without_files)}")
 
+        if subdirs_with_files:
+            self.logger.info(f"Found {len(profraw_files)} .profraw files in {len(subdirs_with_files)} subdirectories: {', '.join(subdirs_with_files)}")
+
+        # Only fail if NO subdirectories have coverage files
         if not profraw_files:
-            self.logger.error(f"No .profraw files found in any of the {len(add_subdirs)} add subdirectories")
+            if not add_subdirs:
+                self.logger.error("No add subdirectories found in pydcov directory")
+            else:
+                self.logger.error(f"No .profraw files found in any of the {len(add_subdirs)} add subdirectories")
             return False
-
-        self.logger.info(f"Found {len(profraw_files)} .profraw files in {len(subdirs_with_files)} subdirectories: {', '.join(subdirs_with_files)}")
 
         try:
             cmd = [llvm_profdata, 'merge', '-sparse'] + [str(f) for f in profraw_files] + ['-o', str(output_file)]
@@ -189,10 +195,28 @@ class CoverageFileManager:
                     error_details.append(f"stderr:\n{result.stderr.strip()}")
 
                 error_msg = "\n".join(error_details) if error_details else "No output captured"
-                self.logger.error(f"llvm-profdata merge failed: {error_msg}")
+                self.logger.warning(f"Bulk merge of {len(profraw_files)} .profraw files failed: {error_msg}")
 
-                # List which files were being processed
-                self.logger.warning(f"Failed to merge {len(profraw_files)} .profraw files from subdirectories: {', '.join(subdirs_with_files)}")
+                # Try to identify problematic files and retry with valid ones
+                valid_files = self._identify_valid_profraw_files(profraw_files)
+
+                if valid_files and len(valid_files) < len(profraw_files):
+                    self.logger.info(f"Attempting partial merge with {len(valid_files)} valid .profraw files")
+
+                    # Retry merge with only valid files
+                    retry_cmd = [llvm_profdata, 'merge', '-sparse'] + [str(f) for f in valid_files] + ['-o', str(output_file)]
+                    retry_result = subprocess.run(retry_cmd, capture_output=True, text=True, timeout=120)
+
+                    if retry_result.returncode == 0:
+                        failed_files = len(profraw_files) - len(valid_files)
+                        self.logger.warning(f"Partial merge succeeded: processed {len(valid_files)} files, skipped {failed_files} corrupted files")
+                        self.logger.success(f"Successfully merged coverage data to {output_file}")
+                        return True
+                    else:
+                        self.logger.error(f"Partial merge also failed: {retry_result.stderr}")
+
+                # If we get here, all attempts failed
+                self.logger.error(f"Failed to merge any .profraw files from subdirectories: {', '.join(subdirs_with_files)}")
                 return False
 
         except subprocess.TimeoutExpired:
@@ -202,6 +226,41 @@ class CoverageFileManager:
         except Exception as e:
             self.logger.error(f"Failed to merge Clang coverage data: {e}")
             return False
+
+    def _identify_valid_profraw_files(self, profraw_files: List[Path]) -> List[Path]:
+        """
+        Identify which .profraw files are valid by testing them individually.
+
+        Args:
+            profraw_files: List of .profraw file paths to test
+
+        Returns:
+            List of valid .profraw file paths
+        """
+        tools = self.tool_manager.get_coverage_tools('clang')
+        llvm_profdata = tools.get('llvm_profdata')
+
+        if not llvm_profdata:
+            return []
+
+        valid_files = []
+
+        for profraw_file in profraw_files:
+            try:
+                # Test if this individual file can be processed
+                test_cmd = [llvm_profdata, 'show', str(profraw_file)]
+                result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=30)
+
+                if result.returncode == 0:
+                    valid_files.append(profraw_file)
+                    self.logger.debug(f"Valid .profraw file: {profraw_file.name}")
+                else:
+                    self.logger.debug(f"Invalid .profraw file: {profraw_file.name} - {result.stderr.strip()}")
+
+            except Exception as e:
+                self.logger.debug(f"Error testing .profraw file {profraw_file.name}: {e}")
+
+        return valid_files
     
     def _merge_gcc_data(self) -> bool:
         """Merge GCC coverage data using lcov."""
@@ -233,48 +292,68 @@ class CoverageFileManager:
 
             failed_subdirs = []
             successful_subdirs = []
+            subdirs_without_files = []
 
             for add_subdir in add_subdirs:
                 subdir_gcda_files = list(add_subdir.glob('*.gcda'))
-                if subdir_gcda_files:
-                    subdir_info_file = add_subdir / 'coverage.info'
-                    cmd = [
-                        lcov, '--capture',
-                        '--directory', str(add_subdir),
-                        '--output-file', str(subdir_info_file),
-                        '--rc', 'branch_coverage=1',
-                        '--ignore-errors', 'gcov,source,unused'
-                    ]
+                if not subdir_gcda_files:
+                    # Subdirectory has no .gcda files - this is not an error, just skip it
+                    subdirs_without_files.append(add_subdir.name)
+                    self.logger.debug(f"No .gcda files found in {add_subdir.name}, skipping")
+                    continue
 
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-                    if result.returncode == 0:
-                        info_files.append(subdir_info_file)
-                        successful_subdirs.append(add_subdir.name)
-                        self.logger.debug(f"Successfully generated coverage info for {add_subdir.name}")
-                    else:
-                        failed_subdirs.append(add_subdir.name)
-                        # Provide detailed error information including both stdout and stderr
-                        error_details = []
-                        if result.stdout.strip():
-                            error_details.append(f"stdout:\n{result.stdout.strip()}")
-                        if result.stderr.strip():
-                            error_details.append(f"stderr:\n{result.stderr.strip()}")
+                # Try to process this subdirectory
+                subdir_info_file = add_subdir / 'coverage.info'
+                cmd = [
+                    lcov, '--capture',
+                    '--directory', str(add_subdir),
+                    '--output-file', str(subdir_info_file),
+                    '--rc', 'branch_coverage=1',
+                    '--ignore-errors', 'gcov,source,unused'
+                ]
 
-                        error_msg = "\n".join(error_details) if error_details else "No output captured"
-                        self.logger.warning(f"Failed to generate coverage info for {add_subdir.name}: {error_msg}")
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                if result.returncode == 0:
+                    info_files.append(subdir_info_file)
+                    successful_subdirs.append(add_subdir.name)
+                    self.logger.debug(f"Successfully generated coverage info for {add_subdir.name}")
+                else:
+                    failed_subdirs.append(add_subdir.name)
+                    # Provide detailed error information including both stdout and stderr
+                    error_details = []
+                    if result.stdout.strip():
+                        error_details.append(f"stdout:\n{result.stdout.strip()}")
+                    if result.stderr.strip():
+                        error_details.append(f"stderr:\n{result.stderr.strip()}")
+
+                    error_msg = "\n".join(error_details) if error_details else "No output captured"
+                    self.logger.warning(f"Failed to generate coverage info for {add_subdir.name}: {error_msg}")
 
             # Report summary of processing results
+            if subdirs_without_files:
+                self.logger.info(f"Skipped {len(subdirs_without_files)} subdirectories with no .gcda files: {', '.join(subdirs_without_files)}")
+
             if failed_subdirs:
-                self.logger.warning(f"Skipped {len(failed_subdirs)} subdirectories due to errors: {', '.join(failed_subdirs)}")
+                self.logger.warning(f"Failed to process {len(failed_subdirs)} subdirectories due to errors: {', '.join(failed_subdirs)}")
 
             if successful_subdirs:
                 self.logger.info(f"Successfully processed {len(successful_subdirs)} subdirectories: {', '.join(successful_subdirs)}")
 
+            # Only fail if NO subdirectories were successfully processed
             if not info_files:
-                self.logger.error("No coverage info files were generated from any subdirectory")
-                if failed_subdirs:
-                    self.logger.error("All subdirectories failed to generate coverage data. Check the warnings above for details.")
+                if not add_subdirs:
+                    self.logger.error("No add subdirectories found in pydcov directory")
+                elif len(subdirs_without_files) == len(add_subdirs):
+                    self.logger.error("No .gcda files found in any subdirectory")
+                else:
+                    self.logger.error("All subdirectories with .gcda files failed to generate coverage data")
+                    self.logger.error("Check the warnings above for details on individual failures")
                 return False
+
+            # If we have some successful info files, continue with merge even if some failed
+            if failed_subdirs:
+                self.logger.info(f"Continuing merge with {len(info_files)} successfully processed subdirectories")
+                self.logger.info(f"Note: {len(failed_subdirs)} subdirectories were skipped due to processing errors")
 
             # Now merge all .info files
             try:
