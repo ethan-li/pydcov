@@ -286,14 +286,15 @@ class CoverageFileManager:
             return False
 
         try:
-            # For GCC, we need to merge coverage from multiple directories
-            # First, create individual .info files for each add subdirectory
+            # For GCC, we need to process individual .gcda files to handle file-level errors
+            # This allows us to skip problematic files while processing valid ones
             info_files = []
 
-            failed_subdirs = []
-            successful_subdirs = []
+            successful_files = []
+            failed_files = []
             subdirs_without_files = []
 
+            # Process each subdirectory and each .gcda file individually
             for add_subdir in add_subdirs:
                 subdir_gcda_files = list(add_subdir.glob('*.gcda'))
                 if not subdir_gcda_files:
@@ -302,58 +303,97 @@ class CoverageFileManager:
                     self.logger.debug(f"No .gcda files found in {add_subdir.name}, skipping")
                     continue
 
-                # Try to process this subdirectory
-                subdir_info_file = add_subdir / 'coverage.info'
-                cmd = [
-                    lcov, '--capture',
-                    '--directory', str(add_subdir),
-                    '--output-file', str(subdir_info_file),
-                    '--rc', 'branch_coverage=1',
-                    '--ignore-errors', 'gcov,source,unused'
-                ]
+                # Process each .gcda file individually to handle file-level errors
+                subdir_info_files = []
+                subdir_successful_files = []
+                subdir_failed_files = []
 
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-                if result.returncode == 0:
-                    info_files.append(subdir_info_file)
-                    successful_subdirs.append(add_subdir.name)
-                    self.logger.debug(f"Successfully generated coverage info for {add_subdir.name}")
-                else:
-                    failed_subdirs.append(add_subdir.name)
-                    # Provide detailed error information including both stdout and stderr
-                    error_details = []
-                    if result.stdout.strip():
-                        error_details.append(f"stdout:\n{result.stdout.strip()}")
-                    if result.stderr.strip():
-                        error_details.append(f"stderr:\n{result.stderr.strip()}")
+                for gcda_file in subdir_gcda_files:
+                    # Check if corresponding .gcno file exists
+                    gcno_file = gcda_file.with_suffix('.gcno')
+                    if not gcno_file.exists():
+                        failed_files.append(f"{gcda_file.name} (missing .gcno file)")
+                        subdir_failed_files.append(gcda_file.name)
+                        continue
 
-                    error_msg = "\n".join(error_details) if error_details else "No output captured"
-                    self.logger.warning(f"Failed to generate coverage info for {add_subdir.name}: {error_msg}")
+                    # Create individual .info file for this source file
+                    file_info_path = add_subdir / f"{gcda_file.stem}.info"
+
+                    # Use lcov to capture coverage for this specific file
+                    cmd = [
+                        lcov, '--capture',
+                        '--directory', str(add_subdir),
+                        '--output-file', str(file_info_path),
+                        '--rc', 'branch_coverage=1',
+                        '--ignore-errors', 'gcov,source,unused',
+                        '--include', f"*{gcda_file.stem}*"  # Only include this specific source file
+                    ]
+
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                    if result.returncode == 0 and file_info_path.exists() and file_info_path.stat().st_size > 0:
+                        subdir_info_files.append(file_info_path)
+                        subdir_successful_files.append(gcda_file.name)
+                        self.logger.debug(f"Successfully processed {gcda_file.name} in {add_subdir.name}")
+                    else:
+                        # Extract specific error information
+                        error_reason = "unknown error"
+                        if result.stderr:
+                            if "stamp mismatch" in result.stderr:
+                                error_reason = "stamp mismatch with notes file"
+                            elif "gcov failed" in result.stderr:
+                                error_reason = "gcov processing failed"
+                            elif "no data" in result.stderr.lower():
+                                error_reason = "no coverage data"
+                            else:
+                                error_reason = result.stderr.strip().split('\n')[-1]  # Last line of error
+
+                        failed_files.append(f"{gcda_file.name} ({error_reason})")
+                        subdir_failed_files.append(gcda_file.name)
+                        self.logger.debug(f"Failed to process {gcda_file.name} in {add_subdir.name}: {error_reason}")
+
+                # Add successful files from this subdirectory to the overall list
+                if subdir_info_files:
+                    info_files.extend(subdir_info_files)
+                    successful_files.extend([f"{add_subdir.name}/{f}" for f in subdir_successful_files])
+
+                # Log subdirectory summary
+                if subdir_successful_files and subdir_failed_files:
+                    self.logger.info(f"Subdirectory {add_subdir.name}: processed {len(subdir_successful_files)} files, skipped {len(subdir_failed_files)} files")
+                elif subdir_successful_files:
+                    self.logger.debug(f"Subdirectory {add_subdir.name}: successfully processed all {len(subdir_successful_files)} files")
+                elif subdir_failed_files:
+                    self.logger.warning(f"Subdirectory {add_subdir.name}: failed to process all {len(subdir_failed_files)} files")
 
             # Report summary of processing results
             if subdirs_without_files:
                 self.logger.info(f"Skipped {len(subdirs_without_files)} subdirectories with no .gcda files: {', '.join(subdirs_without_files)}")
 
-            if failed_subdirs:
-                self.logger.warning(f"Failed to process {len(failed_subdirs)} subdirectories due to errors: {', '.join(failed_subdirs)}")
+            if failed_files:
+                self.logger.warning(f"Skipped {len(failed_files)} source files due to errors:")
+                for failed_file in failed_files:
+                    self.logger.warning(f"  - {failed_file}")
 
-            if successful_subdirs:
-                self.logger.info(f"Successfully processed {len(successful_subdirs)} subdirectories: {', '.join(successful_subdirs)}")
+            if successful_files:
+                self.logger.info(f"Successfully processed {len(successful_files)} source files")
+                if self.logger.level <= 10:  # DEBUG level
+                    for successful_file in successful_files:
+                        self.logger.debug(f"  ✓ {successful_file}")
 
-            # Only fail if NO subdirectories were successfully processed
+            # Only fail if NO files were successfully processed
             if not info_files:
                 if not add_subdirs:
                     self.logger.error("No add subdirectories found in pydcov directory")
                 elif len(subdirs_without_files) == len(add_subdirs):
                     self.logger.error("No .gcda files found in any subdirectory")
                 else:
-                    self.logger.error("All subdirectories with .gcda files failed to generate coverage data")
-                    self.logger.error("Check the warnings above for details on individual failures")
+                    self.logger.error("All source files failed to generate coverage data")
+                    self.logger.error("Check the warnings above for details on individual file failures")
                 return False
 
             # If we have some successful info files, continue with merge even if some failed
-            if failed_subdirs:
-                self.logger.info(f"Continuing merge with {len(info_files)} successfully processed subdirectories")
-                self.logger.info(f"Note: {len(failed_subdirs)} subdirectories were skipped due to processing errors")
+            if failed_files:
+                self.logger.info(f"Continuing merge with {len(successful_files)} successfully processed source files")
+                self.logger.info(f"Note: {len(failed_files)} source files were skipped due to processing errors")
 
             # Now merge all .info files
             try:
@@ -373,13 +413,14 @@ class CoverageFileManager:
                         return False
 
                 # Calculate files processed
-                processed_gcda_files = len(gcda_files)
+                total_gcda_files = len(gcda_files)
+                processed_files = len(successful_files)
 
-                if failed_subdirs:
-                    self.logger.info(f"Generated coverage info from {processed_gcda_files} .gcda files in {len(successful_subdirs)} subdirectories")
-                    self.logger.info(f"Skipped {len(failed_subdirs)} subdirectories with errors")
+                if failed_files:
+                    self.logger.info(f"Generated coverage info from {processed_files} out of {total_gcda_files} source files")
+                    self.logger.info(f"Skipped {len(failed_files)} source files with errors")
                 else:
-                    self.logger.info(f"Generated coverage info from {processed_gcda_files} .gcda files in {len(add_subdirs)} subdirectories")
+                    self.logger.info(f"Generated coverage info from all {total_gcda_files} source files")
 
                 self.logger.success(f"Successfully merged coverage info at {output_file}")
                 return True
