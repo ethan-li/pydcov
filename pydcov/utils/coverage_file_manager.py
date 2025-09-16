@@ -261,6 +261,100 @@ class CoverageFileManager:
                 self.logger.debug(f"Error testing .profraw file {profraw_file.name}: {e}")
 
         return valid_files
+
+    def _process_individual_gcda_file(self, gcda_file: Path, gcno_file: Path, working_dir: Path) -> tuple[bool, str]:
+        """
+        Process an individual .gcda/.gcno file pair using gcov directly.
+
+        Args:
+            gcda_file: Path to the .gcda file
+            gcno_file: Path to the .gcno file
+            working_dir: Directory to run gcov in
+
+        Returns:
+            Tuple of (success: bool, error_reason: str)
+        """
+        tools = self.tool_manager.get_coverage_tools('gcc')
+        gcov = tools.get('gcov')
+        lcov = tools.get('lcov')
+
+        if not gcov or not lcov:
+            return False, "gcov or lcov not found"
+
+        try:
+            # Step 1: Use gcov to process the individual .gcda file
+            # gcov needs to be run in the directory containing the .gcda/.gcno files
+            gcov_cmd = [
+                gcov,
+                '-b',  # Branch coverage
+                '-c',  # Unconditional branch coverage
+                '-p',  # Preserve path components
+                str(gcda_file.name)  # Just the filename, not full path
+            ]
+
+            # Run gcov in the directory containing the files
+            gcov_result = subprocess.run(
+                gcov_cmd,
+                cwd=working_dir,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if gcov_result.returncode != 0:
+                # Extract specific error information from gcov
+                error_reason = "gcov processing failed"
+                if gcov_result.stderr:
+                    if "stamp mismatch" in gcov_result.stderr:
+                        error_reason = "stamp mismatch with notes file"
+                    elif "no data" in gcov_result.stderr.lower():
+                        error_reason = "no coverage data"
+                    elif "cannot open" in gcov_result.stderr:
+                        error_reason = "cannot open data file"
+                    else:
+                        # Get the most relevant error line
+                        error_lines = [line.strip() for line in gcov_result.stderr.split('\n') if line.strip()]
+                        if error_lines:
+                            error_reason = error_lines[-1]
+
+                return False, error_reason
+
+            # Step 2: Find the generated .gcov file(s)
+            gcov_files = list(working_dir.glob(f"*{gcda_file.stem}*.gcov"))
+            if not gcov_files:
+                return False, "no .gcov files generated"
+
+            # Step 3: Convert .gcov files to .info format using lcov
+            info_file = working_dir / f"{gcda_file.stem}.info"
+
+            # Create a temporary tracefile from the .gcov files
+            lcov_cmd = [
+                lcov,
+                '--capture',
+                '--directory', str(working_dir),
+                '--output-file', str(info_file),
+                '--rc', 'branch_coverage=1',
+                '--ignore-errors', 'source,unused'
+            ]
+
+            lcov_result = subprocess.run(lcov_cmd, capture_output=True, text=True, timeout=30)
+
+            # Clean up .gcov files
+            for gcov_file in gcov_files:
+                try:
+                    gcov_file.unlink()
+                except:
+                    pass
+
+            if lcov_result.returncode == 0 and info_file.exists() and info_file.stat().st_size > 0:
+                return True, ""
+            else:
+                return False, "failed to convert to .info format"
+
+        except subprocess.TimeoutExpired:
+            return False, "processing timeout"
+        except Exception as e:
+            return False, f"processing error: {str(e)}"
     
     def _merge_gcc_data(self) -> bool:
         """Merge GCC coverage data using lcov."""
@@ -316,37 +410,20 @@ class CoverageFileManager:
                         subdir_failed_files.append(gcda_file.name)
                         continue
 
-                    # Create individual .info file for this source file
-                    file_info_path = add_subdir / f"{gcda_file.stem}.info"
+                    # Process this individual .gcda/.gcno file pair using gcov directly
+                    success, error_reason = self._process_individual_gcda_file(gcda_file, gcno_file, add_subdir)
 
-                    # Use lcov to capture coverage for this specific file
-                    cmd = [
-                        lcov, '--capture',
-                        '--directory', str(add_subdir),
-                        '--output-file', str(file_info_path),
-                        '--rc', 'branch_coverage=1',
-                        '--ignore-errors', 'gcov,source,unused',
-                        '--include', f"*{gcda_file.stem}*"  # Only include this specific source file
-                    ]
-
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-                    if result.returncode == 0 and file_info_path.exists() and file_info_path.stat().st_size > 0:
-                        subdir_info_files.append(file_info_path)
-                        subdir_successful_files.append(gcda_file.name)
-                        self.logger.debug(f"Successfully processed {gcda_file.name} in {add_subdir.name}")
+                    if success:
+                        # Find the generated .info file for this source file
+                        file_info_path = add_subdir / f"{gcda_file.stem}.info"
+                        if file_info_path.exists() and file_info_path.stat().st_size > 0:
+                            subdir_info_files.append(file_info_path)
+                            subdir_successful_files.append(gcda_file.name)
+                            self.logger.debug(f"Successfully processed {gcda_file.name} in {add_subdir.name}")
+                        else:
+                            failed_files.append(f"{gcda_file.name} (no coverage data generated)")
+                            subdir_failed_files.append(gcda_file.name)
                     else:
-                        # Extract specific error information
-                        error_reason = "unknown error"
-                        if result.stderr:
-                            if "stamp mismatch" in result.stderr:
-                                error_reason = "stamp mismatch with notes file"
-                            elif "gcov failed" in result.stderr:
-                                error_reason = "gcov processing failed"
-                            elif "no data" in result.stderr.lower():
-                                error_reason = "no coverage data"
-                            else:
-                                error_reason = result.stderr.strip().split('\n')[-1]  # Last line of error
-
                         failed_files.append(f"{gcda_file.name} ({error_reason})")
                         subdir_failed_files.append(gcda_file.name)
                         self.logger.debug(f"Failed to process {gcda_file.name} in {add_subdir.name}: {error_reason}")
