@@ -91,9 +91,8 @@ class IncrementalCoverageManager:
 
         # Ensure proper CMake configuration
         if not self.cmake_helper.ensure_build_configured():
-            self.logger.warning("CMake configuration failed, but build root has been saved")
-            # Don't return False here - we still want to initialize incremental coverage
-            # if the build directory exists and has CMakeCache.txt
+            self.logger.error("CMake configuration failed, but build root has been saved")
+            return False
 
         # Initialize incremental coverage using pure Python
         if not self.file_manager.init_incremental():

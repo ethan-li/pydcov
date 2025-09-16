@@ -71,55 +71,6 @@ class CMakeHelper:
     def build_project(self) -> bool:
         """Build the entire project."""
         return self.run_target('all')
-
-    
-    def configure_project(self, options: List[str] | None = None) -> bool:
-        """
-        Configure the project with CMake.
-        
-        Args:
-            options: Additional CMake options
-            
-        Returns:
-            True if successful, False otherwise
-        """
-        if options is None:
-            options = []
-        
-        # Default options for coverage
-        default_options = [
-            '-DENABLE_COVERAGE=ON',
-            '-DCMAKE_BUILD_TYPE=Debug'
-        ]
-        
-        cmd = ['cmake', '..'] + default_options + options
-        
-        try:
-            self.logger.info("Configuring project with CMake...")
-            result = subprocess.run(
-                cmd,
-                cwd=self.path_manager.build_dir,
-                capture_output=True,
-                text=True,
-                timeout=120
-            )
-            
-            if result.returncode == 0:
-                self.logger.success("CMake configuration completed")
-                return True
-            else:
-                self.logger.error(f"CMake configuration failed: {result.stderr}")
-                return False
-                
-        except subprocess.TimeoutExpired:
-            self.logger.error("CMake configuration timed out")
-            return False
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"CMake configuration failed: {e}")
-            return False
-        except FileNotFoundError:
-            self.logger.error("CMake not found. Please install CMake.")
-            return False
     
     def ensure_build_configured(self) -> bool:
         """
@@ -136,7 +87,7 @@ class CMakeHelper:
             return True
         
         # Configure the project
-        return self.configure_project()
+        return False
     
     def get_available_targets(self) -> List[str]:
         """
