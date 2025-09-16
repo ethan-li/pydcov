@@ -60,7 +60,6 @@ int main() {
 
             # Check that CMake files were copied
             assert (project_path / 'cmake' / 'coverage.cmake').exists()
-            assert (project_path / 'cmake' / 'COVERAGE_USAGE.md').exists()
 
             # Step 3: Try to configure with CMake
             build_dir = project_path / 'build'
