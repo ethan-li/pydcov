@@ -127,7 +127,7 @@ class CoverageFileManager:
         if compiler is None:
             compiler = self.tool_manager.detect_compiler()
 
-        self.coverage_dir.mkdir(parents=True, exist_ok=True)
+        self.pydcov_dir.mkdir(parents=True, exist_ok=True)
 
         if compiler == 'clang':
             return self._merge_clang_data()
@@ -648,7 +648,7 @@ class CoverageFileManager:
             self.logger.error("llvm-cov not found")
             return False
 
-        profdata_file = self.coverage_dir / 'incremental_merged.profdata'
+        profdata_file = self.pydcov_dir / 'merged.profdata'
         if not profdata_file.exists():
             self.logger.error(f"Merged profdata file not found: {profdata_file}")
             return False
@@ -673,11 +673,11 @@ class CoverageFileManager:
         # Set default output file if not provided
         if output_file is None:
             if format_type == 'lcov':
-                output_file = self.coverage_dir / 'incremental_merged.info'
+                output_file = self.pydcov_dir / 'merged.info'
             elif format_type == 'json':
-                output_file = self.coverage_dir / 'incremental_merged.json'
+                output_file = self.pydcov_dir / 'merged.json'
             elif format_type == 'cobertura':
-                output_file = self.coverage_dir / 'incremental_merged.xml'
+                output_file = self.pydcov_dir / 'merged.xml'
             else:
                 self.logger.error(f"Unsupported export format: {format_type}")
                 return False
@@ -718,7 +718,7 @@ class CoverageFileManager:
     def _export_gcc_coverage(self, format_type: str, output_file: Path = None) -> bool:
         """Export GCC coverage data to specified format."""
         # For GCC, the .info file is already in lcov format
-        info_file = self.coverage_dir / 'incremental_merged.info'
+        info_file = self.pydcov_dir / 'merged.info'
 
         if not info_file.exists():
             self.logger.error(f"GCC coverage info file not found: {info_file}")

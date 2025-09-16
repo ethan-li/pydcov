@@ -254,8 +254,8 @@ class IncrementalCoverageManager:
             return False
 
         # Check if reports were generated
-        coverage_dir = self.path_manager.coverage_dir
-        report_dir = coverage_dir / 'incremental_report'
+        pydcov_dir = self.path_manager.pydcov_dir
+        report_dir = pydcov_dir / 'report'
 
         if report_dir.exists() and (report_dir / 'index.html').exists():
             self.logger.success(f"Final coverage report generated")

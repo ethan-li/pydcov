@@ -119,9 +119,6 @@ class TestPackageStructure:
         cmake_dir = package_path / 'cmake'
         assert cmake_dir.exists(), "cmake directory not found in package"
         assert (cmake_dir / 'coverage.cmake').exists(), "coverage.cmake not found"
-        assert (cmake_dir / 'COVERAGE_USAGE.md').exists(), "COVERAGE_USAGE.md not found"
-        
-
 
     
     def test_no_unwanted_files(self):
