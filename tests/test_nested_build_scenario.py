@@ -76,7 +76,7 @@ int main() {
 CMAKE_BUILD_TYPE:STRING=Debug
 CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++
 CMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc
-ENABLE_COVERAGE:BOOL=ON
+PYDCOV_COVERAGE_ENABLED:BOOL=ON
 CMAKE_SOURCE_DIR:STATIC={project_dir}
 CMAKE_BINARY_DIR:STATIC={build_dir}
 """.format(project_dir=project_dir, build_dir=build_dir))
@@ -140,10 +140,11 @@ clean:
             
             # Create CMakeCache.txt with coverage enabled
             cmake_cache = build_dir / 'CMakeCache.txt'
-            cmake_cache.write_text('ENABLE_COVERAGE:BOOL=ON\n')
+            cmake_cache.write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\n')
             
             # Test IncrementalCoverageManager initialization
-            manager = IncrementalCoverageManager(build_root=build_dir)
+            # Use is_init_command=True to force using provided build_root
+            manager = IncrementalCoverageManager(build_root=build_dir, is_init_command=True)
             
             assert manager.path_manager.build_root == build_dir.resolve()
             assert manager.path_manager.validate_build_dir() is True
@@ -166,7 +167,7 @@ clean:
             build_dir = project_dir / 'out' / 'build' / 'x64-Debug'
             
             build_dir.mkdir(parents=True)
-            (build_dir / 'CMakeCache.txt').write_text('ENABLE_COVERAGE:BOOL=ON\n')
+            (build_dir / 'CMakeCache.txt').write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\n')
             
             original_cwd = os.getcwd()
             try:
@@ -203,7 +204,7 @@ clean:
                 cmake_cache = build_dir / 'CMakeCache.txt'
                 cmake_cache.write_text(f"""
 CMAKE_BUILD_TYPE:STRING={config}
-ENABLE_COVERAGE:BOOL=ON
+PYDCOV_COVERAGE_ENABLED:BOOL=ON
 """)
                 
                 # Test each configuration independently

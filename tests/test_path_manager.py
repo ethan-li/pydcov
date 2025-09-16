@@ -179,7 +179,7 @@ class TestPathManagerValidation:
             
             # Create CMakeCache.txt with coverage enabled
             cmake_cache = build_dir / 'CMakeCache.txt'
-            cmake_cache.write_text('ENABLE_COVERAGE:BOOL=ON\nOTHER_VAR:STRING=value\n')
+            cmake_cache.write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\nOTHER_VAR:STRING=value\n')
             
             manager = PathManager(build_root=build_dir)
             
@@ -286,12 +286,13 @@ class TestPathManagerIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             build_dir = Path(temp_dir) / 'build'
             build_dir.mkdir()
-            (build_dir / 'CMakeCache.txt').write_text('ENABLE_COVERAGE:BOOL=ON\n')
+            (build_dir / 'CMakeCache.txt').write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\n')
 
             from pydcov.core.incremental_coverage import IncrementalCoverageManager
 
-            # Test API
-            manager = IncrementalCoverageManager(build_root=build_dir)
+            # Test API - use is_init_command=True to force using provided build_root
+            # instead of loading from stored configuration
+            manager = IncrementalCoverageManager(build_root=build_dir, is_init_command=True)
             assert manager.path_manager.build_root == build_dir.resolve()
 
     def test_different_build_configurations(self):

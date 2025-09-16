@@ -225,7 +225,7 @@ class TestCMakeHelperEnsureBuildConfigured:
             
             # Create CMakeCache.txt with coverage enabled
             cmake_cache = build_dir / 'CMakeCache.txt'
-            cmake_cache.write_text('ENABLE_COVERAGE:BOOL=ON\nOTHER_VAR:STRING=value\n')
+            cmake_cache.write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\nOTHER_VAR:STRING=value\n')
             
             path_manager = PathManager(build_root=build_dir)
             cmake_helper = CMakeHelper(path_manager)
@@ -354,7 +354,7 @@ class TestCMakeHelperIntegrationScenarios:
             cmake_cache = build_dir / 'CMakeCache.txt'
             cmake_cache.write_text(
                 'CMAKE_BUILD_TYPE:STRING=Debug\n'
-                'ENABLE_COVERAGE:BOOL=ON\n'
+                'PYDCOV_COVERAGE_ENABLED:BOOL=ON\n'
                 'CMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++\n'
             )
 
@@ -404,7 +404,7 @@ class TestCMakeHelperIntegrationScenarios:
 
                 # Create CMakeCache.txt
                 cmake_cache = build_dir / 'CMakeCache.txt'
-                cmake_cache.write_text('ENABLE_COVERAGE:BOOL=ON\n')
+                cmake_cache.write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\n')
 
                 path_manager = PathManager(build_root=build_dir)
                 cmake_helper = CMakeHelper(path_manager)
@@ -436,7 +436,7 @@ class TestCMakeHelperIntegrationScenarios:
         with tempfile.TemporaryDirectory() as temp_dir:
             build_dir = Path(temp_dir) / 'build'
             build_dir.mkdir()
-            (build_dir / 'CMakeCache.txt').write_text('ENABLE_COVERAGE:BOOL=ON\n')
+            (build_dir / 'CMakeCache.txt').write_text('PYDCOV_COVERAGE_ENABLED:BOOL=ON\n')
 
             original_cwd = os.getcwd()
             try:

@@ -80,14 +80,12 @@ class PathManager:
         try:
             with open(cmake_cache, 'r') as f:
                 content = f.read()
-                # Check for various forms of ENABLE_COVERAGE=ON
-                if ('ENABLE_COVERAGE:BOOL=ON' in content or
-                    'ENABLE_COVERAGE:UNINITIALIZED=ON' in content or
-                    'ENABLE_COVERAGE=ON' in content):
+                # Check for PyDCov coverage marker
+                if 'PYDCOV_COVERAGE_ENABLED:BOOL=ON' in content:
                     return True
                 else:
                     self.logger.error("Coverage not enabled in CMake configuration")
-                    self.logger.error("Please reconfigure with: cmake -DENABLE_COVERAGE=ON")
+                    self.logger.error("Please reconfigure with: PYDCOV_ENABLE_COVERAGE=1 cmake ..")
                     return False
         except Exception as e:
             self.logger.error(f"Failed to read CMakeCache.txt: {e}")

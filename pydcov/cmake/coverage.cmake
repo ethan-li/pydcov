@@ -32,24 +32,17 @@
 # ==============================================================================
 
 # Check for coverage environment variable
-# Supports: PYDCOV_ENABLE_COVERAGE=1, PYDCOV_ENABLE_COVERAGE=ON, PYDCOV_ENABLE_COVERAGE=TRUE
-# For backward compatibility, also check legacy ENABLE_COVERAGE option if set
-if(DEFINED ENV{PYDCOV_ENABLE_COVERAGE})
+if(NOT ENV{PYDCOV_ENABLE_COVERAGE} STREQUAL "")
+    message(STATUS "PYDCOV_ENABLE_COVERAGE was set, value = ${PYDCOV_ENABLE_COVERAGE}")
     string(TOUPPER "$ENV{PYDCOV_ENABLE_COVERAGE}" COVERAGE_ENV_VALUE)
-    if(COVERAGE_ENV_VALUE STREQUAL "1" OR
-       COVERAGE_ENV_VALUE STREQUAL "ON" OR
-       COVERAGE_ENV_VALUE STREQUAL "TRUE" OR
-       COVERAGE_ENV_VALUE STREQUAL "YES")
-        set(ENABLE_COVERAGE ON)
-    else()
-        set(ENABLE_COVERAGE OFF)
-    endif()
+
+    # Set a cache variable to mark that coverage is enabled
+    # This provides a reliable marker for PyDCov to detect coverage builds
+    set(PYDCOV_COVERAGE_ENABLED ON CACHE BOOL "PyDCov coverage instrumentation is enabled")
 else()
-    # Backward compatibility: check for legacy CMake option
-    option(ENABLE_COVERAGE "Enable code coverage (deprecated: use PYDCOV_ENABLE_COVERAGE environment variable)" OFF)
-    if(ENABLE_COVERAGE)
-        message(STATUS "Note: -DENABLE_COVERAGE is deprecated. Use PYDCOV_ENABLE_COVERAGE=1 environment variable instead.")
-    endif()
+    # Only proceed if coverage is enabled
+    message(ERROR "Note: PYDCOV_ENABLE_COVERAGE was not set as environment variable.")
+    return()
 endif()
 
 # ==============================================================================
@@ -71,11 +64,6 @@ function(coverage_add_executable target_name)
 
     message(STATUS "Registered executable for coverage: ${target_name}")
 endfunction()
-
-# Only proceed if coverage is enabled
-if(NOT ENABLE_COVERAGE)
-    return()
-endif()
 
 message(STATUS "Coverage enabled - configuring coverage tools...")
 
@@ -178,28 +166,4 @@ message(STATUS "  Coverage Flags: ${COVERAGE_FLAGS}")
 if(COVERAGE_LIBS)
     message(STATUS "  Coverage Libraries: ${COVERAGE_LIBS}")
 endif()
-message(STATUS "  Coverage Output: ${CMAKE_BINARY_DIR}/coverage/")
-message(STATUS "  CMake coverage targets have been removed - use Python tools instead:")
-message(STATUS "    pydcov coverage clean   # Clean coverage data")
-message(STATUS "    pydcov coverage report  # Generate coverage reports")
-message(STATUS "    pydcov coverage full \"test_cmd\"  # Complete workflow")
 
-message(STATUS "  coverage_add_executable() is preserved for compatibility")
-
-# Python tools information
-find_program(PYTHON3_EXECUTABLE python3)
-find_program(PYDCOV_EXECUTABLE pydcov)
-if(PYTHON3_EXECUTABLE AND PYDCOV_EXECUTABLE)
-    message(STATUS "  PyDCov: ENABLED")
-    message(STATUS "    Python executable: ${PYTHON3_EXECUTABLE}")
-    message(STATUS "    PyDCov executable: ${PYDCOV_EXECUTABLE}")
-    message(STATUS "    Use: pydcov coverage [clean|build|test|report|full]")
-    message(STATUS "    Use: pydcov incremental [init|add|merge|report|clean]")
-elseif(PYTHON3_EXECUTABLE)
-    message(STATUS "  PyDCov: NOT INSTALLED")
-    message(STATUS "    Python executable: ${PYTHON3_EXECUTABLE}")
-    message(STATUS "    Install PyDCov: pip install pydcov")
-else()
-    message(WARNING "  PyDCov: python3 not found")
-    message(WARNING "    Install Python 3 and PyDCov: pip install pydcov")
-endif()
