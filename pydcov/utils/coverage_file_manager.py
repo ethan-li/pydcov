@@ -324,37 +324,156 @@ class CoverageFileManager:
             if not gcov_files:
                 return False, "no .gcov files generated"
 
-            # Step 3: Convert .gcov files to .info format using lcov
+            # Step 3: Convert each .gcov file to .info format individually
             info_file = working_dir / f"{gcda_file.stem}.info"
+            successful_conversions = []
 
-            # Create a temporary tracefile from the .gcov files
-            lcov_cmd = [
-                lcov,
-                '--capture',
-                '--directory', str(working_dir),
-                '--output-file', str(info_file),
-                '--rc', 'branch_coverage=1',
-                '--ignore-errors', 'source,unused'
-            ]
-
-            lcov_result = subprocess.run(lcov_cmd, capture_output=True, text=True, timeout=30)
-
-            # Clean up .gcov files
             for gcov_file in gcov_files:
+                # Convert this individual .gcov file to .info format
+                temp_info_file = working_dir / f"{gcov_file.stem}_temp.info"
+
+                success = self._convert_individual_gcov_to_info(gcov_file, temp_info_file, lcov)
+                if success:
+                    successful_conversions.append(temp_info_file)
+                else:
+                    self.logger.debug(f"Failed to convert {gcov_file.name} to .info format")
+
+                # Clean up this .gcov file
                 try:
                     gcov_file.unlink()
                 except:
                     pass
 
-            if lcov_result.returncode == 0 and info_file.exists() and info_file.stat().st_size > 0:
-                return True, ""
+            # Step 4: Merge successful individual .info files into final .info file
+            if successful_conversions:
+                if len(successful_conversions) == 1:
+                    # Just rename the single file
+                    successful_conversions[0].rename(info_file)
+                else:
+                    # Merge multiple .info files
+                    merge_cmd = [lcov] + [item for temp_file in successful_conversions for item in ['-a', str(temp_file)]] + ['-o', str(info_file)]
+                    merge_result = subprocess.run(merge_cmd, capture_output=True, text=True, timeout=30)
+
+                    # Clean up temporary files
+                    for temp_file in successful_conversions:
+                        try:
+                            temp_file.unlink()
+                        except:
+                            pass
+
+                    if merge_result.returncode != 0:
+                        return False, "failed to merge individual .info files"
+
+                if info_file.exists() and info_file.stat().st_size > 0:
+                    return True, ""
+                else:
+                    return False, "no valid coverage data in .info file"
             else:
-                return False, "failed to convert to .info format"
+                return False, "all .gcov files failed to convert to .info format"
 
         except subprocess.TimeoutExpired:
             return False, "processing timeout"
         except Exception as e:
             return False, f"processing error: {str(e)}"
+
+    def _convert_individual_gcov_to_info(self, gcov_file: Path, output_info_file: Path, lcov_path: str) -> bool:
+        """
+        Convert an individual .gcov file to .info format.
+
+        Args:
+            gcov_file: Path to the .gcov file to convert
+            output_info_file: Path where the .info file should be written
+            lcov_path: Path to the lcov executable
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            # Use geninfo to convert the individual .gcov file to .info format
+            # geninfo can process individual .gcov files without directory scanning
+            geninfo_cmd = [
+                'geninfo',  # geninfo is part of lcov package
+                str(gcov_file),
+                '--output-filename', str(output_info_file),
+                '--rc', 'branch_coverage=1',
+                '--ignore-errors', 'source,unused'
+            ]
+
+            result = subprocess.run(geninfo_cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode == 0 and output_info_file.exists() and output_info_file.stat().st_size > 0:
+                return True
+            else:
+                # If geninfo fails, try alternative approach using lcov with specific file
+                return self._convert_gcov_to_info_alternative(gcov_file, output_info_file, lcov_path)
+
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # If geninfo is not available, try alternative approach
+            return self._convert_gcov_to_info_alternative(gcov_file, output_info_file, lcov_path)
+        except Exception:
+            return False
+
+    def _convert_gcov_to_info_alternative(self, gcov_file: Path, output_info_file: Path, lcov_path: str) -> bool:
+        """
+        Alternative method to convert .gcov file to .info format by parsing .gcov manually.
+
+        Args:
+            gcov_file: Path to the .gcov file to convert
+            output_info_file: Path where the .info file should be written
+            lcov_path: Path to the lcov executable
+
+        Returns:
+            True if conversion successful, False otherwise
+        """
+        try:
+            # Parse the .gcov file manually and create .info format
+            # This is a fallback when geninfo is not available or fails
+
+            if not gcov_file.exists():
+                return False
+
+            # Read and parse the .gcov file
+            gcov_content = gcov_file.read_text(encoding='utf-8', errors='ignore')
+            lines = gcov_content.split('\n')
+
+            # Extract source file information from .gcov file
+            source_file = None
+            line_data = []
+
+            for line in lines:
+                if line.startswith('        -:    0:Source:'):
+                    source_file = line.split('Source:')[1].strip()
+                elif ':' in line and not line.startswith('        -:    0:'):
+                    # Parse line coverage data
+                    parts = line.split(':', 2)
+                    if len(parts) >= 2:
+                        try:
+                            execution_count = parts[0].strip()
+                            line_number = parts[1].strip()
+                            if execution_count != '-' and line_number.isdigit():
+                                if execution_count == '#####':
+                                    execution_count = '0'
+                                line_data.append((line_number, execution_count))
+                        except:
+                            continue
+
+            if source_file and line_data:
+                # Create .info file content
+                info_content = f"TN:\nSF:{source_file}\n"
+                for line_num, count in line_data:
+                    info_content += f"DA:{line_num},{count}\n"
+                info_content += f"LF:{len(line_data)}\n"
+                info_content += f"LH:{sum(1 for _, count in line_data if count != '0')}\n"
+                info_content += "end_of_record\n"
+
+                # Write .info file
+                output_info_file.write_text(info_content, encoding='utf-8')
+                return True
+
+            return False
+
+        except Exception:
+            return False
     
     def _merge_gcc_data(self) -> bool:
         """Merge GCC coverage data using lcov."""
