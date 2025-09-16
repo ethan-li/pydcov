@@ -14,7 +14,7 @@ from .logging_config import get_logger
 class PathManager:
     """Manages paths and directories for the coverage system."""
 
-    def __init__(self, build_root: Path | None = None):
+    def __init__(self, build_root: Path | None = None, pydcov_dir: Path | None = None):
         self.logger = get_logger()
 
         if build_root is None:
@@ -32,10 +32,21 @@ class PathManager:
                 )
 
         self.build_root = Path(build_root).resolve()
+
+        # Set up pydcov_dir (separate from build_root)
+        if pydcov_dir is None:
+            # Default to current working directory if not specified
+            pydcov_dir = Path.cwd()
+
+        self.pydcov_dir = Path(pydcov_dir).resolve() / 'pydcov_dir'
+
+        # For backward compatibility, keep coverage_dir pointing to the old location
+        # This will be used by legacy code paths
         self.coverage_dir = self.build_root / 'coverage'
 
         self.logger.debug(f"Build root: {self.build_root}")
-        self.logger.debug(f"Coverage directory: {self.coverage_dir}")
+        self.logger.debug(f"PyDCov directory: {self.pydcov_dir}")
+        self.logger.debug(f"Legacy coverage directory: {self.coverage_dir}")
 
         # Backward compatibility: provide build_dir as alias for build_root
         self.build_dir = self.build_root
@@ -44,7 +55,12 @@ class PathManager:
         """Ensure coverage directory exists and return its path."""
         self.coverage_dir.mkdir(parents=True, exist_ok=True)
         return self.coverage_dir
-    
+
+    def ensure_pydcov_dir(self) -> Path:
+        """Ensure pydcov directory exists and return its path."""
+        self.pydcov_dir.mkdir(parents=True, exist_ok=True)
+        return self.pydcov_dir
+
     def ensure_incremental_dir(self) -> Path:
         """Ensure incremental coverage directory exists and return its path."""
         incremental_dir = self.coverage_dir / 'incremental'
@@ -96,7 +112,7 @@ class PathManager:
     def clean_coverage_data(self, incremental_only: bool = False):
         """
         Clean coverage data files.
-        
+
         Args:
             incremental_only: If True, only clean incremental data
         """
@@ -113,6 +129,15 @@ class PathManager:
                 import shutil
                 shutil.rmtree(self.coverage_dir)
                 self.logger.info("Cleaned all coverage data")
+
+    def clean_pydcov_data(self):
+        """
+        Clean all pydcov directory data.
+        """
+        if self.pydcov_dir.exists():
+            import shutil
+            shutil.rmtree(self.pydcov_dir)
+            self.logger.info(f"Cleaned pydcov directory: {self.pydcov_dir}")
     
     def relative_to_build(self, path: Path) -> str:
         """Get path relative to build root."""

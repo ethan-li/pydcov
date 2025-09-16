@@ -12,17 +12,20 @@ Usage:
 
 Commands:
     init          - Initialize incremental coverage tracking (requires --build-root)
-    add           - Add coverage data from test run
-    merge         - Merge coverage data
-    report        - Generate incremental coverage report
-    status        - Show incremental coverage status
-    clean         - Clean incremental coverage data
+    add           - Add coverage data from test run (creates unique subdirectory)
+    merge         - Merge coverage data from all test runs
+    report        - Generate comprehensive coverage report
+    status        - Show coverage status and directory information
+    clean         - Clean all coverage data and configuration
     export        - Export coverage data to standard formats (lcov, json)
     init-cmake    - Initialize CMake integration
 
 Examples:
     # Initialize with build directory (only required once)
     pydcov init --build-root build
+
+    # Initialize with custom pydcov directory location
+    pydcov init --build-root build --pydcov-dir /path/to/coverage/data
 
     # All subsequent commands use stored configuration
     pydcov add python -m pytest tests/ -v --tb=short
@@ -71,6 +74,11 @@ def add_init_arguments(parser):
         '--build-root',
         type=Path,
         help='CMake build directory (auto-detected if not specified)'
+    )
+    parser.add_argument(
+        '--pydcov-dir',
+        type=Path,
+        help='Directory for pydcov coverage data (default: current working directory)'
     )
 
 
@@ -121,7 +129,7 @@ def parse_arguments() -> argparse.Namespace:
     # Create incremental coverage commands
     init_parser = subparsers.add_parser('init',
                                        help='Initialize incremental coverage tracking',
-                                       description='Initialize incremental coverage tracking and save build root configuration for subsequent commands')
+                                       description='Initialize incremental coverage tracking and save build root and coverage directory configuration for subsequent commands')
     add_common_arguments(init_parser)
     add_init_arguments(init_parser)
 
@@ -177,7 +185,8 @@ def handle_incremental_command(args) -> int:
     try:
         is_init_command = args.subcommand == 'init'
         build_root = getattr(args, 'build_root', None)
-        manager = IncrementalCoverageManager(build_root=build_root, is_init_command=is_init_command)
+        pydcov_dir = getattr(args, 'pydcov_dir', None)
+        manager = IncrementalCoverageManager(build_root=build_root, pydcov_dir=pydcov_dir, is_init_command=is_init_command)
 
         if args.subcommand == 'init':
             success = manager.init()

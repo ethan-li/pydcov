@@ -85,13 +85,13 @@ class PyDCovConfig:
     def get_build_root(self) -> Optional[Path]:
         """
         Get the stored build root path.
-        
+
         Returns:
             Build root path if configured, None otherwise
         """
         config = self.load_config()
         build_root_str = config.get('build_root')
-        
+
         if build_root_str:
             build_root = Path(build_root_str)
             if build_root.exists():
@@ -99,21 +99,55 @@ class PyDCovConfig:
             else:
                 self.logger.warning(f"Configured build root does not exist: {build_root}")
                 return None
-        
+
+        return None
+
+    def get_pydcov_dir(self) -> Optional[Path]:
+        """
+        Get the stored pydcov directory path.
+
+        Returns:
+            PyDCov directory path if configured, None otherwise
+        """
+        config = self.load_config()
+        pydcov_dir_str = config.get('pydcov_dir')
+
+        if pydcov_dir_str:
+            pydcov_dir = Path(pydcov_dir_str)
+            if pydcov_dir.exists():
+                return pydcov_dir
+            else:
+                self.logger.warning(f"Configured pydcov directory does not exist: {pydcov_dir}")
+                return None
+
         return None
     
     def set_build_root(self, build_root: Path) -> bool:
         """
         Set and save the build root path.
-        
+
         Args:
             build_root: Build root path to store
-            
+
         Returns:
             True if successful, False otherwise
         """
         config = self.load_config()
         config['build_root'] = build_root
+        return self.save_config(config)
+
+    def set_pydcov_dir(self, pydcov_dir: Path) -> bool:
+        """
+        Set and save the pydcov directory path.
+
+        Args:
+            pydcov_dir: PyDCov directory path to store
+
+        Returns:
+            True if successful, False otherwise
+        """
+        config = self.load_config()
+        config['pydcov_dir'] = pydcov_dir
         return self.save_config(config)
     
     def config_exists(self) -> bool:

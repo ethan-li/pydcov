@@ -99,11 +99,12 @@ pydcov report
 
 ```bash
 pydcov init                          # Initialize incremental tracking
+pydcov init --pydcov-dir /path/data  # Initialize with custom coverage directory
 pydcov add python -m pytest tests/  # Add coverage data from test run
 pydcov merge                         # Merge coverage data
 pydcov report                        # Generate incremental report
 pydcov status                        # Show incremental status
-pydcov clean                         # Clean incremental data
+pydcov clean                         # Clean all coverage data
 ```
 
 ### Utility Commands

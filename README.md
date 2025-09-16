@@ -117,11 +117,12 @@ PyDCov focuses on **incremental coverage collection** for optimal performance an
 
 ```bash
 pydcov init                              # Initialize incremental tracking
+pydcov init --pydcov-dir /path/to/data   # Initialize with custom coverage directory
 pydcov add python -m pytest tests/      # Add coverage data from test run
 pydcov merge                             # Merge coverage data
 pydcov report                            # Generate incremental report
 pydcov status                            # Show incremental status
-pydcov clean                             # Clean incremental data
+pydcov clean                             # Clean all coverage data
 ```
 
 ### Project Setup Commands
@@ -131,6 +132,47 @@ pydcov init-cmake              # Copy CMake integration files
 pydcov --version               # Show version
 pydcov --help                  # Show help
 ```
+
+## 📁 Coverage Directory Management
+
+PyDCov now supports flexible coverage directory management:
+
+### Default Behavior
+By default, PyDCov creates a `pydcov_dir` directory in your current working directory to store all coverage data.
+
+### Custom Coverage Directory
+You can specify a custom location for coverage data:
+
+```bash
+# Initialize with custom coverage directory
+pydcov init --build-root build --pydcov-dir /path/to/coverage/data
+
+# All subsequent commands will use the configured directory
+pydcov add python -m pytest tests/
+pydcov merge
+pydcov report
+```
+
+### Unique Subdirectories for Each Test Run
+Each `pydcov add` command creates a unique timestamped subdirectory under `pydcov_dir`, allowing you to:
+- Run multiple test suites independently
+- Aggregate coverage data from different test runs
+- Maintain a complete history of coverage data
+
+### Directory Structure
+```
+pydcov_dir/
+├── add_20240101_120000_123/    # First test run
+│   ├── coverage-*.profraw
+│   └── *.gcda
+├── add_20240101_120030_456/    # Second test run
+│   ├── coverage-*.profraw
+│   └── *.gcda
+├── merged.profdata             # Merged coverage data
+└── report/                     # Generated reports
+    └── index.html
+```
+
 ## 💻 Python API
 
 PyDCov can also be used programmatically:

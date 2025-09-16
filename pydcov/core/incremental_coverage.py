@@ -7,8 +7,8 @@ accumulated across multiple pytest executions.
 """
 
 import os
-import shutil
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -24,12 +24,13 @@ from pydcov.utils.config import PyDCovConfig
 class IncrementalCoverageManager:
     """Manages incremental coverage collection and reporting workflows."""
 
-    def __init__(self, build_root: Path | None = None, is_init_command: bool = False):
+    def __init__(self, build_root: Path | None = None, pydcov_dir: Path | None = None, is_init_command: bool = False):
         """
         Initialize IncrementalCoverageManager.
 
         Args:
             build_root: Path to CMake build directory. If None, will try to load from config or auto-detect.
+            pydcov_dir: Path to pydcov directory. If None, will try to load from config or default to current directory.
             is_init_command: True if this is being called from the init command
         """
         self.logger = get_logger()
@@ -39,6 +40,7 @@ class IncrementalCoverageManager:
         # For other commands, try to load from config first
         if is_init_command:
             resolved_build_root = build_root
+            resolved_pydcov_dir = pydcov_dir
         else:
             # Try to load from config first
             resolved_build_root = self.config.get_build_root()
@@ -49,7 +51,12 @@ class IncrementalCoverageManager:
                 # No config found and no build_root provided - let PathManager handle auto-detection
                 resolved_build_root = None
 
-        self.path_manager = PathManager(resolved_build_root)
+            # Handle pydcov_dir similarly
+            resolved_pydcov_dir = self.config.get_pydcov_dir()
+            if resolved_pydcov_dir is None and pydcov_dir is not None:
+                resolved_pydcov_dir = pydcov_dir
+
+        self.path_manager = PathManager(resolved_build_root, resolved_pydcov_dir)
         self.cmake_helper = CMakeHelper(self.path_manager)
         self.compiler_detector = CompilerDetector()
 
@@ -58,11 +65,23 @@ class IncrementalCoverageManager:
         # Initialize file manager for pure Python coverage operations
         self.file_manager = CoverageFileManager(
             self.path_manager.build_dir,
-            self.path_manager.coverage_dir
+            self.path_manager.pydcov_dir
         )
 
         # Validate tools on initialization
         self._validate_environment()
+
+    def _create_unique_add_subdir(self) -> Path:
+        """
+        Create a unique subdirectory for this add operation.
+
+        Returns:
+            Path to the created unique subdirectory
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Include milliseconds
+        unique_dir = self.path_manager.pydcov_dir / f"add_{timestamp}"
+        unique_dir.mkdir(parents=True, exist_ok=True)
+        return unique_dir
     
     def _validate_environment(self):
         """Validate that required tools are available."""
@@ -83,11 +102,16 @@ class IncrementalCoverageManager:
         """
         self.logger.step("Initializing incremental coverage collection...")
 
-        # Save build root to configuration for future commands first
+        # Save build root and pydcov_dir to configuration for future commands first
         if not self.config.set_build_root(self.path_manager.build_root):
             self.logger.warning("Failed to save build root configuration")
         else:
             self.logger.info(f"Build root saved to configuration: {self.path_manager.build_root}")
+
+        if not self.config.set_pydcov_dir(self.path_manager.pydcov_dir):
+            self.logger.warning("Failed to save pydcov directory configuration")
+        else:
+            self.logger.info(f"PyDCov directory saved to configuration: {self.path_manager.pydcov_dir}")
 
         # Ensure proper CMake configuration
         if not self.cmake_helper.ensure_build_configured():
@@ -133,6 +157,11 @@ class IncrementalCoverageManager:
         # Set up environment for coverage
         env = os.environ.copy()
         compiler = self.compiler_detector.detect_compiler()
+
+        # Create unique subdirectory for this add operation
+        add_subdir = self._create_unique_add_subdir()
+        self.file_manager.set_current_add_subdir(add_subdir)
+        self.logger.info(f"Created unique subdirectory for this add operation: {add_subdir}")
 
         if compiler == 'clang':
             # Set LLVM_PROFILE_FILE for Clang coverage
@@ -204,12 +233,12 @@ class IncrementalCoverageManager:
 
         # Check if merged data exists, if not, merge automatically
         compiler = self.compiler_detector.detect_compiler()
-        coverage_dir = self.path_manager.coverage_dir
+        pydcov_dir = self.path_manager.pydcov_dir
 
         if compiler == 'clang':
-            merged_file = coverage_dir / 'incremental_merged.profdata'
+            merged_file = pydcov_dir / 'merged.profdata'
         else:  # gcc
-            merged_file = coverage_dir / 'incremental_merged.info'
+            merged_file = pydcov_dir / 'merged.info'
 
         if not merged_file.exists():
             self.logger.info("Merged coverage data not found, merging automatically...")
@@ -450,37 +479,15 @@ class IncrementalCoverageManager:
 
     def clean(self) -> bool:
         """
-        Clean all incremental coverage data.
+        Clean all pydcov coverage data.
 
         Returns:
             True if successful, False otherwise
         """
-        self.logger.step("Cleaning incremental coverage data...")
+        self.logger.step("Cleaning pydcov coverage data...")
 
-        coverage_dir = self.path_manager.coverage_dir
-
-        # Remove incremental directory
-        incremental_dir = coverage_dir / 'incremental'
-        if incremental_dir.exists():
-            shutil.rmtree(incremental_dir)
-            self.logger.info("Removed incremental coverage directory")
-
-        # Remove merged files
-        merged_files = [
-            coverage_dir / 'incremental_merged.profdata',
-            coverage_dir / 'incremental_merged.info'
-        ]
-
-        for merged_file in merged_files:
-            if merged_file.exists():
-                merged_file.unlink()
-                self.logger.info(f"Removed {merged_file.name}")
-
-        # Remove incremental report
-        report_dir = coverage_dir / 'incremental_report'
-        if report_dir.exists():
-            shutil.rmtree(report_dir)
-            self.logger.info("Removed incremental report directory")
+        # Remove entire pydcov_dir
+        self.path_manager.clean_pydcov_data()
 
         # Also remove configuration file
         if self.config.config_exists():
@@ -489,7 +496,7 @@ class IncrementalCoverageManager:
             else:
                 self.logger.warning("Failed to remove configuration file")
 
-        self.logger.success("Incremental coverage data cleaned")
+        self.logger.success("PyDCov coverage data cleaned")
         return True
 
     def status(self) -> dict:
@@ -505,8 +512,10 @@ class IncrementalCoverageManager:
         # Add additional information
         status = {
             'build_root': str(self.path_manager.build_root),
+            'pydcov_dir': str(self.path_manager.pydcov_dir),
             'compiler': self.compiler_detector.detect_compiler(),
-            'incremental_dir_exists': file_status['incremental_dir_exists'],
+            'pydcov_dir_exists': file_status.get('pydcov_dir_exists', False),
+            'add_subdirs_count': file_status.get('add_subdirs_count', 0),
             'profraw_count': file_status['profraw_count'],
             'gcda_count': file_status['gcda_count'],
             'accumulated_files': file_status['profraw_count'] + file_status['gcda_count'],
@@ -515,20 +524,20 @@ class IncrementalCoverageManager:
         }
 
         # Add file paths if they exist
-        coverage_dir = self.path_manager.coverage_dir
+        pydcov_dir = self.path_manager.pydcov_dir
         compiler = status['compiler']
 
         if compiler == 'clang':
-            merged_file = coverage_dir / 'incremental_merged.profdata'
+            merged_file = pydcov_dir / 'merged.profdata'
             if merged_file.exists():
                 status['merged_file'] = str(merged_file)
         else:
-            merged_file = coverage_dir / 'incremental_merged.info'
+            merged_file = pydcov_dir / 'merged.info'
             if merged_file.exists():
                 status['merged_file'] = str(merged_file)
 
         # Check for final report
-        report_dir = coverage_dir / 'incremental_report'
+        report_dir = pydcov_dir / 'report'
         if report_dir.exists() and (report_dir / 'index.html').exists():
             status['report_path'] = str(report_dir / 'index.html')
 

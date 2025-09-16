@@ -16,13 +16,21 @@ from pydcov.utils.logging_config import get_logger
 
 class CoverageFileManager:
     """Manages coverage file operations using pure Python."""
-    
-    def __init__(self, build_dir: Path, coverage_dir: Path):
+
+    def __init__(self, build_dir: Path, pydcov_dir: Path):
         self.build_dir = Path(build_dir)
-        self.coverage_dir = Path(coverage_dir)
-        self.incremental_dir = self.coverage_dir / 'incremental'
+        self.pydcov_dir = Path(pydcov_dir)
+        # For backward compatibility, keep incremental_dir for legacy operations
+        self.incremental_dir = self.pydcov_dir / 'incremental'
         self.logger = get_logger()
         self.tool_manager = CoverageToolManager()
+
+        # Track current add subdirectory for this session
+        self.current_add_subdir = None
+
+    def set_current_add_subdir(self, add_subdir: Path):
+        """Set the current add subdirectory for coverage file collection."""
+        self.current_add_subdir = add_subdir
     
     def init_incremental(self) -> bool:
         """
@@ -48,25 +56,29 @@ class CoverageFileManager:
     
     def collect_coverage_files(self) -> Tuple[int, int]:
         """
-        Collect coverage files from build directory to incremental directory.
-        
+        Collect coverage files from build directory to current add subdirectory.
+
         Returns:
             Tuple of (profraw_count, gcda_count)
         """
-        self.incremental_dir.mkdir(parents=True, exist_ok=True)
-        
+        if self.current_add_subdir is None:
+            self.logger.error("No current add subdirectory set. Call set_current_add_subdir() first.")
+            return 0, 0
+
+        self.current_add_subdir.mkdir(parents=True, exist_ok=True)
+
         profraw_count = 0
         gcda_count = 0
-        
+
         try:
             # Collect .profraw files (Clang)
             profraw_files = list(self.build_dir.rglob('*.profraw'))
-            # Exclude files already in incremental directory
-            profraw_files = [f for f in profraw_files if not str(f).startswith(str(self.incremental_dir))]
-            
+            # Exclude files already in pydcov_dir
+            profraw_files = [f for f in profraw_files if not str(f).startswith(str(self.pydcov_dir))]
+
             for profraw_file in profraw_files:
                 try:
-                    dest = self.incremental_dir / profraw_file.name
+                    dest = self.current_add_subdir / profraw_file.name
                     shutil.copy2(profraw_file, dest)
                     profraw_count += 1
                 except Exception as e:
@@ -74,23 +86,23 @@ class CoverageFileManager:
             
             # Collect .gcda files (GCC)
             gcda_files = list(self.build_dir.rglob('*.gcda'))
-            gcda_files = [f for f in gcda_files if not str(f).startswith(str(self.incremental_dir))]
-            
+            gcda_files = [f for f in gcda_files if not str(f).startswith(str(self.pydcov_dir))]
+
             for gcda_file in gcda_files:
                 try:
-                    dest = self.incremental_dir / gcda_file.name
+                    dest = self.current_add_subdir / gcda_file.name
                     shutil.copy2(gcda_file, dest)
                     gcda_count += 1
                 except Exception as e:
                     self.logger.warning(f"Failed to copy {gcda_file}: {e}")
-            
+
             # Also collect .gcno files for GCC
             gcno_files = list(self.build_dir.rglob('*.gcno'))
-            gcno_files = [f for f in gcno_files if not str(f).startswith(str(self.incremental_dir))]
-            
+            gcno_files = [f for f in gcno_files if not str(f).startswith(str(self.pydcov_dir))]
+
             for gcno_file in gcno_files:
                 try:
-                    dest = self.incremental_dir / gcno_file.name
+                    dest = self.current_add_subdir / gcno_file.name
                     shutil.copy2(gcno_file, dest)
                 except Exception as e:
                     self.logger.warning(f"Failed to copy {gcno_file}: {e}")
@@ -134,10 +146,15 @@ class CoverageFileManager:
             self.logger.error("llvm-profdata not found")
             return False
 
-        # Find .profraw files in incremental directory
-        profraw_files = list(self.incremental_dir.glob('*.profraw'))
-        output_file = self.coverage_dir / 'incremental_merged.profdata'
-        source_desc = "incremental directory"
+        # Find .profraw files in all add subdirectories
+        profraw_files = []
+        add_subdirs = [d for d in self.pydcov_dir.iterdir() if d.is_dir() and d.name.startswith('add_')]
+
+        for add_subdir in add_subdirs:
+            profraw_files.extend(list(add_subdir.glob('*.profraw')))
+
+        output_file = self.pydcov_dir / 'merged.profdata'
+        source_desc = f"pydcov directory ({len(add_subdirs)} add subdirectories)"
 
         if not profraw_files:
             self.logger.warning(f"No .profraw files found in {source_desc}")
@@ -172,34 +189,63 @@ class CoverageFileManager:
             self.logger.error("lcov not found")
             return False
 
-        # Check for .gcda files in incremental directory
-        gcda_files = list(self.incremental_dir.glob('*.gcda'))
-        output_file = self.coverage_dir / 'incremental_merged.info'
-        source_dir = self.incremental_dir
-        source_desc = "incremental directory"
+        # Find all add subdirectories with .gcda files
+        add_subdirs = [d for d in self.pydcov_dir.iterdir() if d.is_dir() and d.name.startswith('add_')]
+        gcda_files = []
+
+        for add_subdir in add_subdirs:
+            gcda_files.extend(list(add_subdir.glob('*.gcda')))
+
+        output_file = self.pydcov_dir / 'merged.info'
+        source_desc = f"pydcov directory ({len(add_subdirs)} add subdirectories)"
 
         if not gcda_files:
             self.logger.warning(f"No .gcda files found in {source_desc}")
             return False
 
         try:
-            cmd = [
-                lcov, '--capture',
-                '--directory', str(source_dir),
-                '--output-file', str(output_file),
-                '--rc', 'branch_coverage=1',
-                '--ignore-errors', 'gcov,source,unused'
-            ]
+            # For GCC, we need to merge coverage from multiple directories
+            # First, create individual .info files for each add subdirectory
+            info_files = []
 
-            self.logger.info(f"Generating coverage info from {len(gcda_files)} .gcda files...")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            for add_subdir in add_subdirs:
+                subdir_gcda_files = list(add_subdir.glob('*.gcda'))
+                if subdir_gcda_files:
+                    subdir_info_file = add_subdir / 'coverage.info'
+                    cmd = [
+                        lcov, '--capture',
+                        '--directory', str(add_subdir),
+                        '--output-file', str(subdir_info_file),
+                        '--rc', 'branch_coverage=1',
+                        '--ignore-errors', 'gcov,source,unused'
+                    ]
 
-            if result.returncode == 0:
-                self.logger.success(f"Successfully generated coverage info at {output_file}")
-                return True
-            else:
-                self.logger.error(f"lcov failed: {result.stderr}")
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                    if result.returncode == 0:
+                        info_files.append(subdir_info_file)
+                    else:
+                        self.logger.warning(f"Failed to generate coverage info for {add_subdir}: {result.stderr}")
+
+            if not info_files:
+                self.logger.error("No coverage info files were generated")
                 return False
+
+            # Now merge all .info files
+            if len(info_files) == 1:
+                # Just copy the single file
+                shutil.copy2(info_files[0], output_file)
+            else:
+                # Merge multiple files
+                cmd = [lcov] + [item for info_file in info_files for item in ['-a', str(info_file)]] + ['-o', str(output_file)]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+                if result.returncode != 0:
+                    self.logger.error(f"lcov merge failed: {result.stderr}")
+                    return False
+
+            self.logger.info(f"Generated coverage info from {len(gcda_files)} .gcda files in {len(add_subdirs)} subdirectories")
+            self.logger.success(f"Successfully merged coverage info at {output_file}")
+            return True
 
         except subprocess.TimeoutExpired:
             self.logger.error("lcov timed out")
@@ -222,7 +268,7 @@ class CoverageFileManager:
         if compiler is None:
             compiler = self.tool_manager.detect_compiler()
         
-        report_dir = self.coverage_dir / 'incremental_report'
+        report_dir = self.pydcov_dir / 'report'
         report_dir.mkdir(parents=True, exist_ok=True)
         
         if compiler == 'clang':
@@ -242,7 +288,7 @@ class CoverageFileManager:
             self.logger.error("llvm-cov not found")
             return False
 
-        profdata_file = self.coverage_dir / 'incremental_merged.profdata'
+        profdata_file = self.pydcov_dir / 'merged.profdata'
         if not profdata_file.exists():
             self.logger.error(f"Merged profdata file not found: {profdata_file}")
             return False
@@ -330,7 +376,7 @@ class CoverageFileManager:
             self.logger.error("genhtml not found")
             return False
         
-        info_file = self.coverage_dir / 'incremental_merged.info'
+        info_file = self.pydcov_dir / 'merged.info'
         if not info_file.exists():
             self.logger.error(f"Merged info file not found: {info_file}")
             return False
@@ -358,22 +404,33 @@ class CoverageFileManager:
             return False
     
     def get_status(self) -> dict:
-        """Get current status of incremental coverage."""
-        profraw_files = list(self.incremental_dir.glob('*.profraw')) if self.incremental_dir.exists() else []
-        gcda_files = list(self.incremental_dir.glob('*.gcda')) if self.incremental_dir.exists() else []
-        
-        merged_profdata = self.coverage_dir / 'incremental_merged.profdata'
-        merged_info = self.coverage_dir / 'incremental_merged.info'
-        report_dir = self.coverage_dir / 'incremental_report'
-        
+        """Get current status of pydcov coverage."""
+        # Count files in all add subdirectories
+        profraw_files = []
+        gcda_files = []
+        add_subdirs = []
+
+        if self.pydcov_dir.exists():
+            add_subdirs = [d for d in self.pydcov_dir.iterdir() if d.is_dir() and d.name.startswith('add_')]
+            for add_subdir in add_subdirs:
+                profraw_files.extend(list(add_subdir.glob('*.profraw')))
+                gcda_files.extend(list(add_subdir.glob('*.gcda')))
+
+        merged_profdata = self.pydcov_dir / 'merged.profdata'
+        merged_info = self.pydcov_dir / 'merged.info'
+        report_dir = self.pydcov_dir / 'report'
+
         return {
-            'incremental_dir_exists': self.incremental_dir.exists(),
+            'pydcov_dir_exists': self.pydcov_dir.exists(),
+            'add_subdirs_count': len(add_subdirs),
             'profraw_count': len(profraw_files),
             'gcda_count': len(gcda_files),
             'merged_profdata_exists': merged_profdata.exists(),
             'merged_info_exists': merged_info.exists(),
             'report_exists': report_dir.exists() and (report_dir / 'index.html').exists(),
-            'compiler': self.tool_manager.detect_compiler()
+            'compiler': self.tool_manager.detect_compiler(),
+            # Keep legacy fields for backward compatibility
+            'incremental_dir_exists': self.incremental_dir.exists()
         }
 
 
