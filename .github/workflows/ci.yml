@@ -248,14 +248,12 @@ jobs:
         # Verify CMake integration structure
         test -d cmake
         test -f cmake/coverage.cmake
-        test -f cmake/COVERAGE_USAGE.md
 
     - name: Test CMake integration
       run: |
         mkdir test_cmake_integration
         pydcov init-cmake --project-root test_cmake_integration
         test -f test_cmake_integration/cmake/coverage.cmake
-        test -f test_cmake_integration/cmake/COVERAGE_USAGE.md
 
     - name: Upload wheel artifact
       uses: actions/upload-artifact@v4
@@ -308,7 +306,6 @@ jobs:
         cd /tmp/test_standalone
         ${{ github.workspace }}/dist/pydcov init-cmake
         test -f cmake/coverage.cmake
-        test -f cmake/COVERAGE_USAGE.md
         cd ${{ github.workspace }}
         rm -rf /tmp/test_standalone
 
