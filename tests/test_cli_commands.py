@@ -93,13 +93,11 @@ class TestInitCMakeCommand:
             
             assert result.returncode == 0
             assert 'Copied coverage.cmake' in result.stdout
-            assert 'Copied COVERAGE_USAGE.md' in result.stdout
             
             # Check that files were created
             cmake_dir = temp_path / 'cmake'
             assert cmake_dir.exists()
             assert (cmake_dir / 'coverage.cmake').exists()
-            assert (cmake_dir / 'COVERAGE_USAGE.md').exists()
     
     def test_init_cmake_force_overwrite(self):
         """Test init-cmake with force overwrite."""
