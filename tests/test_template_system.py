@@ -38,11 +38,6 @@ class TestCMakeIntegration:
             coverage_cmake = cmake_dir / 'coverage.cmake'
             assert coverage_cmake.exists()
             assert coverage_cmake.is_file()
-            
-            # Check that documentation was created
-            usage_doc = cmake_dir / 'COVERAGE_USAGE.md'
-            assert usage_doc.exists()
-            assert usage_doc.is_file()
     
     def test_init_cmake_force_overwrite(self):
         """Test that init-cmake --force overwrites existing files."""
@@ -118,28 +113,6 @@ class TestCMakeIntegration:
             # Should contain common CMake patterns
             assert any(keyword in content for keyword in ['option', 'if', 'endif'])
     
-    def test_usage_documentation_exists(self):
-        """Test that usage documentation is created and contains helpful content."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Run init-cmake command
-            result = subprocess.run(
-                ['pydcov', 'init-cmake', '--project-root', str(temp_path)],
-                capture_output=True, text=True
-            )
-            
-            assert result.returncode == 0
-            
-            # Check usage documentation
-            usage_doc = temp_path / 'cmake' / 'COVERAGE_USAGE.md'
-            content = usage_doc.read_text()
-            
-            # Should contain usage instructions
-            assert 'coverage' in content.lower()
-            assert 'cmake' in content.lower()
-            assert any(keyword in content.lower() for keyword in ['usage', 'how', 'example'])
-
 
 class TestCMakeIntegrationAPI:
     """Test CMake integration through Python API."""

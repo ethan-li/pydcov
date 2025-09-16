@@ -6,7 +6,7 @@ include pydcov.spec
 include build_standalone.py
 
 # Include CMake integration files
-recursive-include pydcov/cmake *.cmake *.md
+recursive-include pydcov/cmake *.cmake
 # Exclude Python cache files
 global-exclude __pycache__
 global-exclude *.pyc

@@ -221,7 +221,7 @@ def copy_cmake_files_from_traversable_with_force(cmake_traversable, cmake_dir: P
     import shutil
 
     for item in cmake_traversable.iterdir():
-        if item.is_file() and (item.name.endswith('.cmake') or item.name.endswith('.md')):
+        if item.is_file() and item.name.endswith('.cmake'):
             dest_file = cmake_dir / item.name
 
             if dest_file.exists() and not force:
@@ -282,16 +282,6 @@ def handle_init_cmake_command(args) -> int:
 
                 shutil.copy2(cmake_file, dest_file)
                 print(f"Copied {cmake_file.name} to {dest_file}")
-
-            # Copy documentation files
-            for doc_file in package_cmake_dir.glob('*.md'):
-                dest_file = cmake_dir / doc_file.name
-
-                if dest_file.exists() and not getattr(args, 'force', False):
-                    continue
-
-                shutil.copy2(doc_file, dest_file)
-                print(f"Copied {doc_file.name} to {dest_file}")
 
         print(f"\nCMake integration files copied to {cmake_dir}")
         print("Add the following line to your CMakeLists.txt:")

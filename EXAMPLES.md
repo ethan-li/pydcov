@@ -198,7 +198,6 @@ pydcov init-cmake
 
 # This creates:
 # cmake/coverage.cmake      # PyDCov integration
-# cmake/COVERAGE_USAGE.md   # Usage documentation
 
 # Update your CMakeLists.txt to include:
 echo "include(cmake/coverage.cmake)" >> CMakeLists.txt

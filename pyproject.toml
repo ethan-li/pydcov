@@ -58,7 +58,7 @@ where = ["."]
 include = ["pydcov*"]
 
 [tool.setuptools.package-data]
-pydcov = ["cmake/*.cmake", "cmake/*.md"]
+pydcov = ["cmake/*.cmake"]
 
 [tool.black]
 line-length = 88
