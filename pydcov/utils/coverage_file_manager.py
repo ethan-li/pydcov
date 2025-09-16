@@ -350,8 +350,8 @@ class CoverageFileManager:
                     # Just rename the single file
                     successful_conversions[0].rename(info_file)
                 else:
-                    # Merge multiple .info files
-                    merge_cmd = [lcov] + [item for temp_file in successful_conversions for item in ['-a', str(temp_file)]] + ['-o', str(info_file)]
+                    # Merge multiple .info files with error handling
+                    merge_cmd = [lcov] + [item for temp_file in successful_conversions for item in ['-a', str(temp_file)]] + ['-o', str(info_file), '--ignore-errors', 'format,corrupt']
                     merge_result = subprocess.run(merge_cmd, capture_output=True, text=True, timeout=30)
 
                     # Clean up temporary files
@@ -362,7 +362,7 @@ class CoverageFileManager:
                             pass
 
                     if merge_result.returncode != 0:
-                        return False, "failed to merge individual .info files"
+                        return False, f"failed to merge individual .info files: {merge_result.stderr.strip() if merge_result.stderr else 'unknown error'}"
 
                 if info_file.exists() and info_file.stat().st_size > 0:
                     return True, ""
@@ -396,7 +396,7 @@ class CoverageFileManager:
                 str(gcov_file),
                 '--output-filename', str(output_info_file),
                 '--rc', 'branch_coverage=1',
-                '--ignore-errors', 'source,unused'
+                '--ignore-errors', 'source,unused,format,corrupt'
             ]
 
             result = subprocess.run(geninfo_cmd, capture_output=True, text=True, timeout=30)
@@ -451,8 +451,14 @@ class CoverageFileManager:
                             execution_count = parts[0].strip()
                             line_number = parts[1].strip()
                             if execution_count != '-' and line_number.isdigit():
+                                # Handle different gcov execution count formats
                                 if execution_count == '#####':
-                                    execution_count = '0'
+                                    execution_count = '0'  # Unexecuted line
+                                elif execution_count == '=====':
+                                    execution_count = '999999'  # Very high execution count
+                                elif not execution_count.isdigit():
+                                    # Skip lines with non-numeric execution counts
+                                    continue
                                 line_data.append((line_number, execution_count))
                         except:
                             continue
@@ -598,8 +604,8 @@ class CoverageFileManager:
                     shutil.copy2(info_files[0], output_file)
                     self.logger.info(f"Copied single coverage info file to {output_file}")
                 else:
-                    # Merge multiple files
-                    cmd = [lcov] + [item for info_file in info_files for item in ['-a', str(info_file)]] + ['-o', str(output_file)]
+                    # Merge multiple files with error handling for format issues
+                    cmd = [lcov] + [item for info_file in info_files for item in ['-a', str(info_file)]] + ['-o', str(output_file), '--ignore-errors', 'format,corrupt']
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
                     if result.returncode != 0:
