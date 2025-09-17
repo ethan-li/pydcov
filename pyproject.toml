@@ -9,16 +9,16 @@ description = "Incremental C/C++ code coverage tools for CMake projects"
 readme = "README_PACKAGE.md"
 license = "MIT"
 authors = [
-    {name = "PyDCov Project", email = "pydcov@example.com"}
+    {name = "Ethan Li"}
 ]
 maintainers = [
-    {name = "PyDCov Project", email = "pydcov@example.com"}
+    {name = "Ethan Li"}
 ]
 keywords = [
     "coverage", "incremental", "c", "cpp", "cmake", "testing", "gcov", "llvm-cov"
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
