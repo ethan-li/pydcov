@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [ main, develop ]
+    tags:
+      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
   pull_request:
     branches: [ main, develop ]
 
@@ -255,13 +258,6 @@ jobs:
         pydcov init-cmake --project-root test_cmake_integration
         test -f test_cmake_integration/cmake/coverage.cmake
 
-    - name: Upload wheel artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: pydcov-wheel-python${{ matrix.python-version }}
-        path: dist/*.whl
-        retention-days: 7
-
   pyinstaller-build:
     name: Build Standalone Executables
     runs-on: ${{ matrix.os }}
@@ -319,7 +315,7 @@ jobs:
   package:
     name: Package Deliverable Files
     runs-on: ubuntu-latest
-    needs: [test, package-test, pyinstaller-build]
+    needs: [test, package-test]
 
     steps:
     - name: Checkout code
@@ -339,12 +335,12 @@ jobs:
       run: |
         python -m build --wheel
 
-    - name: Download standalone executables
-      uses: actions/download-artifact@v4
+    - name: Upload wheel artifact
+      uses: actions/upload-artifact@v4
       with:
-        pattern: pydcov-*
-        path: dist/standalone/
-        merge-multiple: true
+        name: pydcov-deliverable-package
+        path: dist/*.whl
+        retention-days: 7
 
   pypi_publish:
     name: Upload to PyPI
@@ -400,6 +396,12 @@ jobs:
         mv dist/executables/linux/pydcov dist/executables/pydcov-linux-x64
         mv dist/executables/macos/pydcov dist/executables/pydcov-macos-arm64
         rmdir dist/executables/linux dist/executables/macos
+
+    - name: Download wheel package
+      uses: actions/download-artifact@v4
+      with:
+        name: pydcov-deliverable-package
+        path: dist/pypi/
 
     - name: Create GitHub Release
       id: create_release
