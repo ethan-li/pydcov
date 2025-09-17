@@ -369,6 +369,7 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+        packages-dir: dist/pypi/
 
   github_release:
     name: Create GitHub Release
@@ -407,13 +408,13 @@ jobs:
 
     - name: Create GitHub Release
       id: create_release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: ncipollo/release-action@v1
       with:
-        tag_name: ${{ github.ref }}
+        tag: ${{ github.ref_name }}
+        artifacts: |
+          dist/pypi/*.whl
+          dist/executables/*
+        allowUpdates: true
         draft: false
         prerelease: false
-        files: |
-          dist/pypi/*.whl
-          dist/executables/*.*
+        token: ${{ secrets.GITHUB_TOKEN }}
