@@ -413,7 +413,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: pydcov-deliverable-package
-        path: dist/
+        path: dist/pypi/
 
     - name: Download Linux standalone executable
       uses: actions/download-artifact@v4
@@ -440,3 +440,14 @@ jobs:
         name: release-package
         path: dist/
         retention-days: 90
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine
+    
+    - name: Upload to PyPI
+      run: twine upload dist/*
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }} 
