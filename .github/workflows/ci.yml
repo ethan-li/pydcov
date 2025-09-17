@@ -346,59 +346,6 @@ jobs:
         path: dist/standalone/
         merge-multiple: true
 
-    - name: Create deliverable package
-      run: |
-        mkdir -p dist/pydcov-package
-
-        # Copy PyDCov wheel
-        cp dist/*.whl dist/pydcov-package/
-
-        # Copy standalone executables
-        mkdir -p dist/pydcov-package/executables
-        if [ -f dist/standalone/pydcov ]; then
-          # If we have executables from the standalone build
-          cp dist/standalone/pydcov dist/pydcov-package/executables/ 2>/dev/null || true
-        fi
-
-        # Copy core deliverable files
-        cp -r pydcov/ dist/pydcov-package/
-        cp -r cmake/ dist/pydcov-package/
-        cp -r docs/ dist/pydcov-package/
-
-        # Copy root configuration files
-        cp CMakeLists.txt dist/pydcov-package/
-        cp README.md dist/pydcov-package/
-        cp LICENSE dist/pydcov-package/
-        cp requirements.txt dist/pydcov-package/
-        cp pytest.ini dist/pydcov-package/
-        cp EXAMPLES.md dist/pydcov-package/
-        cp pyproject.toml dist/pydcov-package/
-        cp MANIFEST.in dist/pydcov-package/
-
-        # Copy example modules (for demonstration)
-        cp -r examples/ dist/pydcov-package/
-
-        # Clean up build artifacts from examples (keep tests for reference)
-        find dist/pydcov-package/examples/ -name "build" -type d -exec rm -rf {} + 2>/dev/null || true
-        find dist/pydcov-package/ -name "*.profraw" -delete
-        find dist/pydcov-package/ -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-        find dist/pydcov-package/ -name "*.pyc" -delete
-
-    - name: Create package archive
-      run: |
-        cd dist
-        tar -czf pydcov-package.tar.gz pydcov-package/
-        zip -r pydcov-package.zip pydcov-package/
-
-    - name: Upload deliverable package
-      uses: actions/upload-artifact@v4
-      with:
-        name: pydcov-deliverable-package
-        path: |
-          dist/pydcov-package.tar.gz
-          dist/pydcov-package.zip
-        retention-days: 30
-
   release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -433,13 +380,6 @@ jobs:
         mv dist/executables/linux/pydcov dist/executables/pydcov-linux-x64
         mv dist/executables/macos/pydcov dist/executables/pydcov-macos-arm64
         rmdir dist/executables/linux dist/executables/macos
-
-    - name: Upload release artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-package
-        path: dist/
-        retention-days: 90
 
     - name: Create GitHub Release
       id: create_release
