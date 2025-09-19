@@ -36,9 +36,9 @@ class PathManager:
         # Set up pydcov_dir (separate from build_root)
         if pydcov_dir is None:
             # Default to current working directory if not specified
-            pydcov_dir = Path.cwd()
+            pydcov_dir = Path.cwd() / 'pydcov_dir'
 
-        self.pydcov_dir = Path(pydcov_dir).resolve() / 'pydcov_dir'
+        self.pydcov_dir = Path(pydcov_dir).resolve()
 
         # For backward compatibility, keep coverage_dir pointing to the old location
         # This will be used by legacy code paths
