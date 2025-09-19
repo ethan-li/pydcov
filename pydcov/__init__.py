@@ -23,8 +23,8 @@ Command-line usage:
     pydcov init-cmake
 """
 
-__version__ = "1.0.0"
-__author__ = "PyDCov Project"
+__version__ = "1.0.1"
+__author__ = "Ethan Li"
 
 # Import main classes for easy access
 from .core.incremental_coverage import IncrementalCoverageManager

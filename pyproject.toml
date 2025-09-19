@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pydcov"
-version = "1.0.0"
+version = "1.0.1"
 description = "Incremental C/C++ code coverage tools for CMake projects"
 readme = "README_PACKAGE.md"
 license = "MIT"
