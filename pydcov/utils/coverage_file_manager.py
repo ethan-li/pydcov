@@ -288,6 +288,7 @@ class CoverageFileManager:
                 gcov,
                 '-b',  # Branch coverage
                 '-c',  # Unconditional branch coverage
+                '-f',  # Function coverage summaries
                 '-p',  # Preserve path components
                 str(gcda_file.name)  # Just the filename, not full path
             ]
@@ -396,6 +397,7 @@ class CoverageFileManager:
                 str(gcov_file),
                 '--output-filename', str(output_info_file),
                 '--rc', 'branch_coverage=1',
+                '--rc', 'function_coverage=1',
                 '--ignore-errors', 'source,unused,format,corrupt'
             ]
 
@@ -772,6 +774,7 @@ class CoverageFileManager:
                 genhtml, str(info_file),
                 '--output-directory', str(report_dir),
                 '--rc', 'branch_coverage=1',
+                '--rc', 'function_coverage=1',
                 '--ignore-errors', 'source,unused'
             ]
             

@@ -12,6 +12,9 @@
 
 cmake_minimum_required(VERSION 3.9.6)
 
+# Include PyDCov coverage support
+include(cmake/coverage.cmake)
+
 # ==============================================================================
 # Library Target Configuration
 # ==============================================================================
