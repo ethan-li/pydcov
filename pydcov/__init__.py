@@ -23,7 +23,7 @@ Command-line usage:
     pydcov init-cmake
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "Ethan Li"
 
 # Import main classes for easy access
