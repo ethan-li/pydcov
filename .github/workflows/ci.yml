@@ -112,6 +112,11 @@ jobs:
         # Test integration scenarios (marked as slow)
         python -m pytest tests/test_integration.py -v --tb=short --run-slow
 
+    - name: Run function coverage tests
+      run: |
+        # Test function coverage functionality (unit tests only, not slow integration tests)
+        python -m pytest tests/test_function_coverage.py::TestFunctionCoverage::test_gcov_function_flag -v --tb=short
+
     - name: Run example module tests
       run: |
         # Test the example C/C++ modules
@@ -122,11 +127,11 @@ jobs:
         rm -rf build
         mkdir -p build
         cd build
-        # Force specific compiler for coverage
+        # Force specific compiler for coverage using PYDCOV_ENABLE_COVERAGE environment variable
         if [ "${{ matrix.compiler }}" = "gcc" ]; then
-          CC=gcc CXX=g++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+          CC=gcc CXX=g++ PYDCOV_ENABLE_COVERAGE=1 cmake .. -DCMAKE_BUILD_TYPE=Debug
         else
-          CC=clang CXX=clang++ cmake .. -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug
+          CC=clang CXX=clang++ PYDCOV_ENABLE_COVERAGE=1 cmake .. -DCMAKE_BUILD_TYPE=Debug
         fi
         make
 
@@ -182,6 +187,84 @@ jobs:
       run: |
         # Export coverage data to lcov format for Codecov (no --build-root needed after init)
         pydcov export --format lcov
+
+    - name: Verify function coverage in reports
+      run: |
+        # Verify that function coverage data is present in the exported LCOV file
+        echo "Verifying function coverage data in coverage reports..."
+
+        # Check for merged.info file (GCC) or merged.profdata (Clang)
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          COVERAGE_FILE="pydcov_dir/merged.info"
+          if [ -f "$COVERAGE_FILE" ]; then
+            echo "✓ Found GCC coverage file: $COVERAGE_FILE"
+
+            # Check for function coverage entries
+            if grep -q "^FN:" "$COVERAGE_FILE"; then
+              echo "✓ Function definitions (FN:) found"
+            else
+              echo "✗ ERROR: No function definitions (FN:) found in coverage file"
+              exit 1
+            fi
+
+            if grep -q "^FNDA:" "$COVERAGE_FILE"; then
+              echo "✓ Function execution data (FNDA:) found"
+            else
+              echo "✗ ERROR: No function execution data (FNDA:) found in coverage file"
+              exit 1
+            fi
+
+            if grep -q "^FNF:" "$COVERAGE_FILE"; then
+              echo "✓ Functions found count (FNF:) present"
+            else
+              echo "✗ ERROR: No functions found count (FNF:) in coverage file"
+              exit 1
+            fi
+
+            if grep -q "^FNH:" "$COVERAGE_FILE"; then
+              echo "✓ Functions hit count (FNH:) present"
+            else
+              echo "✗ ERROR: No functions hit count (FNH:) in coverage file"
+              exit 1
+            fi
+
+            # Check for branch coverage entries
+            if grep -q "^BRDA:" "$COVERAGE_FILE"; then
+              echo "✓ Branch data (BRDA:) found"
+            else
+              echo "⚠ WARNING: No branch data (BRDA:) found in coverage file"
+            fi
+
+            # Display summary
+            echo ""
+            echo "Function Coverage Summary:"
+            grep "^FNF:" "$COVERAGE_FILE" | head -5
+            grep "^FNH:" "$COVERAGE_FILE" | head -5
+            echo ""
+            echo "✓ Function coverage verification PASSED for GCC"
+          else
+            echo "⚠ WARNING: Coverage file not found: $COVERAGE_FILE"
+            echo "This may be expected if no coverage was collected"
+          fi
+        else
+          # For Clang, check the exported LCOV file
+          COVERAGE_FILE="pydcov_dir/merged.info"
+          if [ -f "$COVERAGE_FILE" ]; then
+            echo "✓ Found Clang-exported LCOV file: $COVERAGE_FILE"
+
+            # Check for function coverage entries
+            if grep -q "^FN:" "$COVERAGE_FILE"; then
+              echo "✓ Function definitions (FN:) found"
+            else
+              echo "⚠ WARNING: No function definitions (FN:) found in Clang coverage export"
+              echo "Note: Clang coverage may not include function-level data in LCOV export"
+            fi
+
+            echo "✓ Function coverage verification completed for Clang"
+          else
+            echo "⚠ WARNING: Coverage file not found: $COVERAGE_FILE"
+          fi
+        fi
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
