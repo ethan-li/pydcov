@@ -84,30 +84,46 @@ class CoverageFileManager:
                 except Exception as e:
                     self.logger.warning(f"Failed to copy {profraw_file}: {e}")
             
-            # Collect .gcda files (GCC)
+            # Collect .gcda files (GCC) and their corresponding .gcno files
             gcda_files = list(self.build_dir.rglob('*.gcda'))
             gcda_files = [f for f in gcda_files if not str(f).startswith(str(self.pydcov_dir))]
 
+            # Track .gcno files that have been copied to avoid duplicates
+            copied_gcno_files = set()
+            gcno_count = 0
+            missing_gcno_count = 0
+
             for gcda_file in gcda_files:
                 try:
+                    # Copy the .gcda file
                     dest = self.current_add_subdir / gcda_file.name
                     shutil.copy2(gcda_file, dest)
                     gcda_count += 1
+
+                    # Find and copy the corresponding .gcno file from the same directory
+                    gcno_file = gcda_file.with_suffix('.gcno')
+                    if gcno_file.exists() and gcno_file.name not in copied_gcno_files:
+                        gcno_dest = self.current_add_subdir / gcno_file.name
+                        shutil.copy2(gcno_file, gcno_dest)
+                        copied_gcno_files.add(gcno_file.name)
+                        gcno_count += 1
+                    elif not gcno_file.exists():
+                        missing_gcno_count += 1
+                        self.logger.debug(f"Missing .gcno file for {gcda_file.name}")
+
                 except Exception as e:
                     self.logger.warning(f"Failed to copy {gcda_file}: {e}")
 
-            # Also collect .gcno files for GCC
-            gcno_files = list(self.build_dir.rglob('*.gcno'))
-            gcno_files = [f for f in gcno_files if not str(f).startswith(str(self.pydcov_dir))]
+            # Report on .gcno file collection
+            if missing_gcno_count > 0:
+                self.logger.warning(
+                    f"Found {missing_gcno_count} .gcda files without corresponding .gcno files. "
+                    "This may cause 'stamp mismatch' errors during coverage generation."
+                )
 
-            for gcno_file in gcno_files:
-                try:
-                    dest = self.current_add_subdir / gcno_file.name
-                    shutil.copy2(gcno_file, dest)
-                except Exception as e:
-                    self.logger.warning(f"Failed to copy {gcno_file}: {e}")
-            
             self.logger.info(f"Collected {profraw_count} .profraw files and {gcda_count} .gcda files")
+            if gcda_count > 0:
+                self.logger.debug(f"Collected {gcno_count} corresponding .gcno files")
             return profraw_count, gcda_count
             
         except Exception as e:
@@ -551,8 +567,26 @@ class CoverageFileManager:
                     else:
                         # geninfo failed for this subdirectory
                         failed_subdirs.append(add_subdir.name)
-                        error_msg = result.stderr.strip() if result.stderr else "no output"
+
+                        # Provide detailed error information to help diagnose the issue
+                        error_details = []
+                        if result.stdout and result.stdout.strip():
+                            error_details.append(f"stdout:\n  {result.stdout.strip()}")
+                        if result.stderr and result.stderr.strip():
+                            error_details.append(f"stderr:\n  {result.stderr.strip()}")
+
+                        error_msg = "\n".join(error_details) if error_details else "no output"
                         self.logger.warning(f"geninfo failed for {add_subdir.name}: {error_msg}")
+
+                        # Check for specific error patterns and provide guidance
+                        if result.stderr and "stamp mismatch" in result.stderr:
+                            self.logger.warning(
+                                f"Stamp mismatch detected in {add_subdir.name}. This usually means:\n"
+                                "  1. Code was recompiled after .gcda files were generated\n"
+                                "  2. .gcno files are from a different build than .gcda files\n"
+                                "  3. Compiler version mismatch between build and test execution\n"
+                                "  Recommendation: Clean build directory and regenerate coverage from scratch"
+                            )
 
                 except subprocess.TimeoutExpired:
                     failed_subdirs.append(add_subdir.name)
