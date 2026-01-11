@@ -24,7 +24,12 @@ from pydcov.utils.config import PyDCovConfig
 class IncrementalCoverageManager:
     """Manages incremental coverage collection and reporting workflows."""
 
-    def __init__(self, build_root: Path | None = None, pydcov_dir: Path | None = None, is_init_command: bool = False):
+    def __init__(
+        self,
+        build_root: Path | None = None,
+        pydcov_dir: Path | None = None,
+        is_init_command: bool = False,
+    ):
         """
         Initialize IncrementalCoverageManager.
 
@@ -64,8 +69,7 @@ class IncrementalCoverageManager:
 
         # Initialize file manager for pure Python coverage operations
         self.file_manager = CoverageFileManager(
-            self.path_manager.build_dir,
-            self.path_manager.pydcov_dir
+            self.path_manager.build_dir, self.path_manager.pydcov_dir
         )
 
         # Validate tools on initialization
@@ -78,21 +82,23 @@ class IncrementalCoverageManager:
         Returns:
             Path to the created unique subdirectory
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Include milliseconds
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[
+            :-3
+        ]  # Include milliseconds
         unique_dir = self.path_manager.pydcov_dir / f"add_{timestamp}"
         unique_dir.mkdir(parents=True, exist_ok=True)
         return unique_dir
-    
+
     def _validate_environment(self):
         """Validate that required tools are available."""
         compiler = self.compiler_detector.detect_compiler()
         is_valid, missing = self.compiler_detector.validate_tools(compiler)
-        
+
         if not is_valid:
             self.logger.error(f"Missing required coverage tools: {', '.join(missing)}")
             self.logger.error("Please install the required tools before proceeding")
             raise RuntimeError(f"Missing coverage tools: {missing}")
-    
+
     def init(self) -> bool:
         """
         Initialize incremental coverage collection.
@@ -106,16 +112,22 @@ class IncrementalCoverageManager:
         if not self.config.set_build_root(self.path_manager.build_root):
             self.logger.warning("Failed to save build root configuration")
         else:
-            self.logger.info(f"Build root saved to configuration: {self.path_manager.build_root}")
+            self.logger.info(
+                f"Build root saved to configuration: {self.path_manager.build_root}"
+            )
 
         if not self.config.set_pydcov_dir(self.path_manager.pydcov_dir):
             self.logger.warning("Failed to save pydcov directory configuration")
         else:
-            self.logger.info(f"PyDCov directory saved to configuration: {self.path_manager.pydcov_dir}")
+            self.logger.info(
+                f"PyDCov directory saved to configuration: {self.path_manager.pydcov_dir}"
+            )
 
         # Ensure proper CMake configuration
         if not self.cmake_helper.ensure_build_configured():
-            self.logger.error("CMake configuration failed, but build root has been saved")
+            self.logger.error(
+                "CMake configuration failed, but build root has been saved"
+            )
             return False
 
         # Initialize incremental coverage using pure Python
@@ -125,60 +137,83 @@ class IncrementalCoverageManager:
 
         self.logger.success("Incremental coverage initialized")
         return True
-    
-    def add(self, test_command: str | List[str], timeout: int = None) -> bool:
+
+    def add(
+        self,
+        test_command: str | List[str] | None = None,
+        timeout: int = None,
+        collect_only: bool = False,
+    ) -> bool:
         """
         Run tests and add coverage data to incremental collection.
 
         Args:
-            test_command: Test command to execute. Must be specified explicitly.
+            test_command: Test command to execute. Can be None if collect_only is True.
                          Examples:
                          - "python -m pytest tests/"
                          - ["python", "-m", "unittest", "discover"]
                          - "./run_tests.sh"
             timeout: Timeout in seconds for test execution (default: None, no timeout)
+            collect_only: If True, skip test execution and only collect existing coverage files
 
         Returns:
             True if successful, False otherwise
         """
-        self.logger.step("Running tests and collecting coverage data...")
-
-        # Parse and prepare test command
-        if isinstance(test_command, list):
-            parsed_command = TestExecutor.parse_test_command(test_command)
+        if collect_only:
+            self.logger.step("Collecting existing coverage data...")
         else:
-            parsed_command = test_command
+            self.logger.step("Running tests and collecting coverage data...")
+
+        if not collect_only and not test_command:
+            self.logger.error(
+                "test_command is required unless --collect-only is specified"
+            )
+            return False
 
         # Ensure build is ready
         if not self.path_manager.validate_coverage_build():
             self.logger.error("Coverage build not configured")
             return False
 
-        # Set up environment for coverage
-        env = os.environ.copy()
+        # Set up environment for coverage (only if not collect_only)
+        env = None
         compiler = self.compiler_detector.detect_compiler()
+
+        if not collect_only:
+            env = os.environ.copy()
+
+            if compiler == "clang":
+                # Set LLVM_PROFILE_FILE for Clang coverage
+                coverage_dir = self.path_manager.ensure_coverage_dir()
+                env["LLVM_PROFILE_FILE"] = str(coverage_dir / "coverage-%p-%m.profraw")
+                self.logger.info(
+                    f"Using Clang coverage with LLVM_PROFILE_FILE={env['LLVM_PROFILE_FILE']}"
+                )
 
         # Create unique subdirectory for this add operation
         add_subdir = self._create_unique_add_subdir()
         self.file_manager.set_current_add_subdir(add_subdir)
-        self.logger.info(f"Created unique subdirectory for this add operation: {add_subdir}")
+        self.logger.info(
+            f"Created unique subdirectory for this add operation: {add_subdir}"
+        )
 
-        if compiler == 'clang':
-            # Set LLVM_PROFILE_FILE for Clang coverage
-            coverage_dir = self.path_manager.ensure_coverage_dir()
-            env['LLVM_PROFILE_FILE'] = str(coverage_dir / 'coverage-%p-%m.profraw')
-            self.logger.info(f"Using Clang coverage with LLVM_PROFILE_FILE={env['LLVM_PROFILE_FILE']}")
+        # Execute test command using TestExecutor (only if not collect_only)
+        if not collect_only:
+            # Parse and prepare test command
+            if isinstance(test_command, list):
+                parsed_command = TestExecutor.parse_test_command(test_command)
+            else:
+                parsed_command = test_command
 
-        # Execute test command using TestExecutor
-        if not self.test_executor.execute_test_command(
-            parsed_command,
-            env=env,
-            timeout=timeout
-        ):
-            return False
+            if not self.test_executor.execute_test_command(
+                parsed_command if parsed_command else [], env=env, timeout=timeout
+            ):
+                return False
 
         # Collect all coverage files generated during testing using pure Python
-        profraw_count, gcda_count = self.file_manager.collect_coverage_files()
+        profraw_count, gcda_count = self.file_manager.collect_coverage_files(
+            collect_only=collect_only
+        )
 
         if profraw_count == 0 and gcda_count == 0:
             self.logger.warning("No coverage files were collected")
@@ -192,14 +227,15 @@ class IncrementalCoverageManager:
         """Show status of collected coverage files."""
         status = self.file_manager.get_status()
 
-        if status['profraw_count'] > 0:
-            self.logger.info(f"Collected {status['profraw_count']} Clang coverage files")
-        if status['gcda_count'] > 0:
+        if status["profraw_count"] > 0:
+            self.logger.info(
+                f"Collected {status['profraw_count']} Clang coverage files"
+            )
+        if status["gcda_count"] > 0:
             self.logger.info(f"Collected {status['gcda_count']} GCC coverage files")
 
-        if status['profraw_count'] == 0 and status['gcda_count'] == 0:
+        if status["profraw_count"] == 0 and status["gcda_count"] == 0:
             self.logger.warning("No coverage files were collected")
-
 
     def merge(self) -> bool:
         """
@@ -218,7 +254,6 @@ class IncrementalCoverageManager:
 
         self.logger.success("Coverage data merged successfully")
         return True
-    
 
     def report(self) -> bool:
         """
@@ -235,10 +270,10 @@ class IncrementalCoverageManager:
         compiler = self.compiler_detector.detect_compiler()
         pydcov_dir = self.path_manager.pydcov_dir
 
-        if compiler == 'clang':
-            merged_file = pydcov_dir / 'merged.profdata'
+        if compiler == "clang":
+            merged_file = pydcov_dir / "merged.profdata"
         else:  # gcc
-            merged_file = pydcov_dir / 'merged.info'
+            merged_file = pydcov_dir / "merged.info"
 
         if not merged_file.exists():
             self.logger.info("Merged coverage data not found, merging automatically...")
@@ -255,13 +290,15 @@ class IncrementalCoverageManager:
 
         # Check if reports were generated
         pydcov_dir = self.path_manager.pydcov_dir
-        report_dir = pydcov_dir / 'report'
+        report_dir = pydcov_dir / "report"
 
-        if report_dir.exists() and (report_dir / 'index.html').exists():
+        if report_dir.exists() and (report_dir / "index.html").exists():
             self.logger.success(f"Final coverage report generated")
             self.logger.success(f"Report available at: {report_dir / 'index.html'}")
         else:
-            self.logger.warning("HTML report not found, but report generation completed")
+            self.logger.warning(
+                "HTML report not found, but report generation completed"
+            )
 
         return True
 
@@ -287,21 +324,27 @@ class IncrementalCoverageManager:
         cmake_executables = self._find_executables_from_cmake_targets()
         if cmake_executables:
             executables.extend(cmake_executables)
-            self.logger.debug(f"Found {len(cmake_executables)} executables from CMake targets")
+            self.logger.debug(
+                f"Found {len(cmake_executables)} executables from CMake targets"
+            )
 
         # Strategy 2: Use make help to find executable targets
         if not executables:
             make_executables = self._find_executables_from_make_targets()
             if make_executables:
                 executables.extend(make_executables)
-                self.logger.debug(f"Found {len(make_executables)} executables from make targets")
+                self.logger.debug(
+                    f"Found {len(make_executables)} executables from make targets"
+                )
 
         # Strategy 3: Fallback to filesystem scan with intelligent filtering
         if not executables:
             fs_executables = self._find_executables_from_filesystem()
             if fs_executables:
                 executables.extend(fs_executables)
-                self.logger.debug(f"Found {len(fs_executables)} executables from filesystem scan")
+                self.logger.debug(
+                    f"Found {len(fs_executables)} executables from filesystem scan"
+                )
 
         # Remove duplicates while preserving order
         unique_executables = []
@@ -312,7 +355,9 @@ class IncrementalCoverageManager:
                 seen.add(exe)
 
         if unique_executables:
-            self.logger.info(f"Found {len(unique_executables)} executable(s) for coverage analysis")
+            self.logger.info(
+                f"Found {len(unique_executables)} executable(s) for coverage analysis"
+            )
             for exe in unique_executables:
                 self.logger.debug(f"  - {exe.relative_to(build_dir)}")
         else:
@@ -329,33 +374,46 @@ class IncrementalCoverageManager:
         """
         executables = []
         build_dir = self.path_manager.build_dir
-        target_dirs_file = build_dir / 'CMakeFiles' / 'TargetDirectories.txt'
+        target_dirs_file = build_dir / "CMakeFiles" / "TargetDirectories.txt"
 
         if not target_dirs_file.exists():
             return executables
 
         try:
-            with open(target_dirs_file, 'r') as f:
+            with open(target_dirs_file, "r") as f:
                 for line in f:
                     line = line.strip()
-                    if not line or '/CMakeFiles/' not in line:
+                    if not line or "/CMakeFiles/" not in line:
                         continue
 
                     # Extract target name from path like:
                     # /path/to/build/examples/algorithm/app/CMakeFiles/algorithm_cli.dir
-                    if line.endswith('.dir'):
+                    if line.endswith(".dir"):
                         target_name = Path(line).name[:-4]  # Remove .dir suffix
 
                         # Skip system targets
-                        if target_name in ['test', 'edit_cache', 'rebuild_cache',
-                                         'list_install_components', 'install', 'local', 'strip']:
+                        if target_name in [
+                            "test",
+                            "edit_cache",
+                            "rebuild_cache",
+                            "list_install_components",
+                            "install",
+                            "local",
+                            "strip",
+                        ]:
                             continue
 
                         # Find the actual executable file
-                        target_dir = Path(line).parent.parent  # Go up from CMakeFiles/target.dir
+                        target_dir = Path(
+                            line
+                        ).parent.parent  # Go up from CMakeFiles/target.dir
                         exe_path = target_dir / target_name
 
-                        if exe_path.exists() and exe_path.is_file() and os.access(exe_path, os.X_OK):
+                        if (
+                            exe_path.exists()
+                            and exe_path.is_file()
+                            and os.access(exe_path, os.X_OK)
+                        ):
                             executables.append(exe_path)
 
         except Exception as e:
@@ -375,38 +433,50 @@ class IncrementalCoverageManager:
 
         try:
             import subprocess
+
             result = subprocess.run(
-                ['make', 'help'],
+                ["make", "help"],
                 cwd=build_dir,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
 
             if result.returncode != 0:
                 return executables
 
             # Parse make help output to find potential executable targets
-            for line in result.stdout.split('\n'):
-                if line.startswith('...') and not line.startswith('The following'):
+            for line in result.stdout.split("\n"):
+                if line.startswith("...") and not line.startswith("The following"):
                     # Format is "... target_name (description)"
                     target_part = line[3:].strip()  # Remove "..." prefix
-                    if ' ' in target_part:
-                        target = target_part.split(' ')[0].strip()
+                    if " " in target_part:
+                        target = target_part.split(" ")[0].strip()
                     else:
                         target = target_part.strip()
 
                     # Skip system targets
-                    if target in ['all', 'clean', 'depend', 'edit_cache', 'install',
-                                'install/local', 'install/strip', 'list_install_components',
-                                'rebuild_cache', 'test']:
+                    if target in [
+                        "all",
+                        "clean",
+                        "depend",
+                        "edit_cache",
+                        "install",
+                        "install/local",
+                        "install/strip",
+                        "list_install_components",
+                        "rebuild_cache",
+                        "test",
+                    ]:
                         continue
 
                     # Look for the executable file in the build directory
                     for exe_path in build_dir.rglob(target):
-                        if (exe_path.is_file() and
-                            os.access(exe_path, os.X_OK) and
-                            'CMakeFiles' not in str(exe_path)):
+                        if (
+                            exe_path.is_file()
+                            and os.access(exe_path, os.X_OK)
+                            and "CMakeFiles" not in str(exe_path)
+                        ):
                             executables.append(exe_path)
                             break  # Only take the first match
 
@@ -426,12 +496,12 @@ class IncrementalCoverageManager:
         build_dir = self.path_manager.build_dir
 
         # Common executable patterns to look for
-        patterns = ['*_cli', '*_app', '*_test', '*_main', '*_demo', '*_example']
+        patterns = ["*_cli", "*_app", "*_test", "*_main", "*_demo", "*_example"]
 
         for pattern in patterns:
             for exe_file in build_dir.rglob(pattern):
                 # Skip CMake temporary files and directories
-                if 'CMakeFiles' in str(exe_file):
+                if "CMakeFiles" in str(exe_file):
                     continue
 
                 # Skip if it's a directory
@@ -443,16 +513,16 @@ class IncrementalCoverageManager:
                     continue
 
                 # Skip common non-executable files
-                if exe_file.suffix in ['.txt', '.cmake', '.log', '.json', '.xml']:
+                if exe_file.suffix in [".txt", ".cmake", ".log", ".json", ".xml"]:
                     continue
 
                 executables.append(exe_file)
 
         # If no pattern-based executables found, do a broader search
         if not executables:
-            for exe_file in build_dir.rglob('*'):
+            for exe_file in build_dir.rglob("*"):
                 # Skip CMake temporary files and directories
-                if 'CMakeFiles' in str(exe_file):
+                if "CMakeFiles" in str(exe_file):
                     continue
 
                 # Skip if it's a directory
@@ -464,13 +534,26 @@ class IncrementalCoverageManager:
                     continue
 
                 # Skip files with common non-executable extensions
-                if exe_file.suffix in ['.txt', '.cmake', '.log', '.json', '.xml',
-                                     '.a', '.so', '.dylib', '.o', '.obj', '.gcno',
-                                     '.gcda', '.profraw', '.profdata']:
+                if exe_file.suffix in [
+                    ".txt",
+                    ".cmake",
+                    ".log",
+                    ".json",
+                    ".xml",
+                    ".a",
+                    ".so",
+                    ".dylib",
+                    ".o",
+                    ".obj",
+                    ".gcno",
+                    ".gcda",
+                    ".profraw",
+                    ".profdata",
+                ]:
                     continue
 
                 # Skip files that are clearly not executables
-                if exe_file.name in ['Makefile', 'cmake_install.cmake']:
+                if exe_file.name in ["Makefile", "cmake_install.cmake"]:
                     continue
 
                 executables.append(exe_file)
@@ -511,35 +594,37 @@ class IncrementalCoverageManager:
 
         # Add additional information
         status = {
-            'build_root': str(self.path_manager.build_root),
-            'pydcov_dir': str(self.path_manager.pydcov_dir),
-            'compiler': self.compiler_detector.detect_compiler(),
-            'pydcov_dir_exists': file_status.get('pydcov_dir_exists', False),
-            'add_subdirs_count': file_status.get('add_subdirs_count', 0),
-            'profraw_count': file_status['profraw_count'],
-            'gcda_count': file_status['gcda_count'],
-            'accumulated_files': file_status['profraw_count'] + file_status['gcda_count'],
-            'merged_data_exists': file_status.get('merged_profdata_exists', False) or file_status.get('merged_info_exists', False),
-            'report_exists': file_status['report_exists']
+            "build_root": str(self.path_manager.build_root),
+            "pydcov_dir": str(self.path_manager.pydcov_dir),
+            "compiler": self.compiler_detector.detect_compiler(),
+            "pydcov_dir_exists": file_status.get("pydcov_dir_exists", False),
+            "add_subdirs_count": file_status.get("add_subdirs_count", 0),
+            "profraw_count": file_status["profraw_count"],
+            "gcda_count": file_status["gcda_count"],
+            "accumulated_files": file_status["profraw_count"]
+            + file_status["gcda_count"],
+            "merged_data_exists": file_status.get("merged_profdata_exists", False)
+            or file_status.get("merged_info_exists", False),
+            "report_exists": file_status["report_exists"],
         }
 
         # Add file paths if they exist
         pydcov_dir = self.path_manager.pydcov_dir
-        compiler = status['compiler']
+        compiler = status["compiler"]
 
-        if compiler == 'clang':
-            merged_file = pydcov_dir / 'merged.profdata'
+        if compiler == "clang":
+            merged_file = pydcov_dir / "merged.profdata"
             if merged_file.exists():
-                status['merged_file'] = str(merged_file)
+                status["merged_file"] = str(merged_file)
         else:
-            merged_file = pydcov_dir / 'merged.info'
+            merged_file = pydcov_dir / "merged.info"
             if merged_file.exists():
-                status['merged_file'] = str(merged_file)
+                status["merged_file"] = str(merged_file)
 
         # Check for final report
-        report_dir = pydcov_dir / 'report'
-        if report_dir.exists() and (report_dir / 'index.html').exists():
-            status['report_path'] = str(report_dir / 'index.html')
+        report_dir = pydcov_dir / "report"
+        if report_dir.exists() and (report_dir / "index.html").exists():
+            status["report_path"] = str(report_dir / "index.html")
 
         return status
 

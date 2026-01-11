@@ -134,8 +134,6 @@ make
 
 ## Improvements Made to pydcov
 
-I've implemented the following improvements to make pydcov more resilient:
-
 ### 1. Better .gcno File Collection
 
 **Before:** Copied all `.gcno` files by name, causing overwrites if multiple files had the same name.
@@ -300,4 +298,3 @@ pydcov add "your_test_command"
 **Long-term Fix:** Implement clean build workflow in CI/CD (see recommended workflow above).
 
 **pydcov Improvements:** Better error reporting, .gcno file pairing, and missing file detection.
-

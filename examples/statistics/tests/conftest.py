@@ -17,7 +17,7 @@ from examples.statistics.tests.statistics_test_utils import (
     cleanup_coverage_files,
     get_statistics_executable_path,
     generate_test_datasets,
-    calculate_expected_statistics
+    calculate_expected_statistics,
 )
 
 
@@ -26,9 +26,7 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line(
         "markers", "statistical: marks tests that verify statistical calculations"
     )
@@ -40,11 +38,11 @@ def pytest_collection_modifyitems(config, items):
         # Mark tests with "comprehensive" or "large" in name as slow
         if "comprehensive" in item.name or "large" in item.name:
             item.add_marker(pytest.mark.slow)
-        
+
         # Mark statistical calculation tests
         if "statistics" in item.name or "calculation" in item.name:
             item.add_marker(pytest.mark.statistical)
-        
+
         # Mark all tests as integration tests since they test the CLI
         item.add_marker(pytest.mark.integration)
 
@@ -110,7 +108,9 @@ def test_datasets():
 def expected_statistics():
     """Provide expected statistics for test datasets."""
     datasets = generate_test_datasets()
-    return {name: calculate_expected_statistics(data) for name, data in datasets.items()}
+    return {
+        name: calculate_expected_statistics(data) for name, data in datasets.items()
+    }
 
 
 # Cleanup fixtures
@@ -145,13 +145,9 @@ def precision_dataset():
 
 
 # Parameterized test data
-@pytest.fixture(params=[
-    [1, 2, 3, 4, 5],
-    [10, 20, 30],
-    [-5, 0, 5],
-    [1.5, 2.5, 3.5],
-    [42]
-])
+@pytest.fixture(
+    params=[[1, 2, 3, 4, 5], [10, 20, 30], [-5, 0, 5], [1.5, 2.5, 3.5], [42]]
+)
 def sample_dataset(request):
     """Parameterized fixture for different sample datasets."""
     return request.param
@@ -168,12 +164,12 @@ def dataset_size(request):
 def invalid_inputs():
     """Provide various invalid inputs for error testing."""
     return {
-        'empty_args': [],
-        'invalid_command': ['invalid_command'],
-        'missing_args': ['create'],
-        'too_many_args': ['create'] + ['1'] * 1000,
-        'non_numeric': ['create', 'abc', 'def'],
-        'mixed_valid_invalid': ['create', '1', 'abc', '3'],
+        "empty_args": [],
+        "invalid_command": ["invalid_command"],
+        "missing_args": ["create"],
+        "too_many_args": ["create"] + ["1"] * 1000,
+        "non_numeric": ["create", "abc", "def"],
+        "mixed_valid_invalid": ["create", "1", "abc", "3"],
     }
 
 
@@ -186,11 +182,11 @@ def algorithm_cli_path():
         project_root / "build" / "algorithm" / "app" / "algorithm_cli",
         project_root / "algorithm" / "app" / "algorithm_cli",
     ]
-    
+
     for path in possible_paths:
         if path.exists() and path.is_file():
             return str(path)
-    
+
     return None
 
 

@@ -26,7 +26,9 @@ def run_command(cmd, cwd=None, check=True, capture_output=True):
     print(f"Running: {' '.join(cmd)}")
     try:
         if capture_output:
-            result = subprocess.run(cmd, cwd=cwd, check=check, capture_output=True, text=True)
+            result = subprocess.run(
+                cmd, cwd=cwd, check=check, capture_output=True, text=True
+            )
             if result.stdout:
                 print(result.stdout)
         else:
@@ -34,7 +36,7 @@ def run_command(cmd, cwd=None, check=True, capture_output=True):
         return result
     except subprocess.CalledProcessError as e:
         print(f"Error running command: {e}")
-        if hasattr(e, 'stderr') and e.stderr:
+        if hasattr(e, "stderr") and e.stderr:
             print(f"Error output: {e.stderr}")
         if check:
             sys.exit(1)
@@ -43,7 +45,7 @@ def run_command(cmd, cwd=None, check=True, capture_output=True):
 
 def clean_build_dirs():
     """Clean build and dist directories."""
-    dirs_to_clean = ['build', 'dist']
+    dirs_to_clean = ["build", "dist"]
     for dir_name in dirs_to_clean:
         if Path(dir_name).exists():
             print(f"Cleaning {dir_name}/")
@@ -54,21 +56,22 @@ def install_pyinstaller():
     """Install PyInstaller if not already installed."""
     try:
         import PyInstaller
+
         print("PyInstaller is already installed")
     except ImportError:
         print("Installing PyInstaller...")
-        run_command([sys.executable, '-m', 'pip', 'install', 'pyinstaller'])
+        run_command([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
 
 def build_executable():
     """Build the standalone executable using PyInstaller."""
     print("Building standalone executable...")
-    run_command(['pyinstaller', 'pydcov.spec'], capture_output=False)
+    run_command(["pyinstaller", "pydcov.spec"], capture_output=False)
 
 
 def test_executable():
     """Test the built executable."""
-    executable_path = Path('dist/pydcov').absolute()
+    executable_path = Path("dist/pydcov").absolute()
     if not executable_path.exists():
         print(f"Error: Executable not found at {executable_path}")
         return False
@@ -76,32 +79,34 @@ def test_executable():
     print("Testing standalone executable...")
 
     # Test version
-    result = run_command([str(executable_path), '--version'], check=False)
+    result = run_command([str(executable_path), "--version"], check=False)
     if result.returncode != 0:
         print("Error: Version test failed")
         return False
 
     # Test help
-    result = run_command([str(executable_path), '--help'], check=False)
+    result = run_command([str(executable_path), "--help"], check=False)
     if result.returncode != 0:
         print("Error: Help test failed")
         return False
 
     # Test CMake integration
-    test_dir = Path('/tmp/test_pydcov_build')
+    test_dir = Path("/tmp/test_pydcov_build")
     if test_dir.exists():
         shutil.rmtree(test_dir)
     test_dir.mkdir(parents=True)
 
     try:
-        result = run_command([str(executable_path), 'init-cmake'], cwd=test_dir, check=False)
+        result = run_command(
+            [str(executable_path), "init-cmake"], cwd=test_dir, check=False
+        )
         if result.returncode != 0:
             print("Error: CMake integration test failed")
             return False
 
         # Check if files were created
-        cmake_dir = test_dir / 'cmake'
-        if not cmake_dir.exists() or not (cmake_dir / 'coverage.cmake').exists():
+        cmake_dir = test_dir / "cmake"
+        if not cmake_dir.exists() or not (cmake_dir / "coverage.cmake").exists():
             print("Error: CMake files not created")
             return False
 
@@ -114,28 +119,30 @@ def test_executable():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--clean', action='store_true', 
-                       help='Clean build directories before building')
-    parser.add_argument('--test', action='store_true',
-                       help='Test the built executable after building')
-    
+    parser.add_argument(
+        "--clean", action="store_true", help="Clean build directories before building"
+    )
+    parser.add_argument(
+        "--test", action="store_true", help="Test the built executable after building"
+    )
+
     args = parser.parse_args()
-    
+
     # Change to script directory
     script_dir = Path(__file__).parent
     os.chdir(script_dir)
-    
+
     if args.clean:
         clean_build_dirs()
-    
+
     install_pyinstaller()
     build_executable()
-    
+
     if args.test:
         if not test_executable():
             sys.exit(1)
-    
-    executable_path = Path('dist/pydcov')
+
+    executable_path = Path("dist/pydcov")
     if executable_path.exists():
         size_mb = executable_path.stat().st_size / (1024 * 1024)
         print(f"\nBuild completed successfully!")
@@ -148,5 +155,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

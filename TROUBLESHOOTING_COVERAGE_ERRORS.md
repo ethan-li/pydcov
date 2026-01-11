@@ -375,14 +375,14 @@ If you're still stuck after trying these solutions:
    uname -a
    gcc --version
    lcov --version
-   
+
    # Build info
    cat build/CMakeCache.txt | grep -E "(CMAKE_BUILD_TYPE|PYDCOV|COVERAGE)"
-   
+
    # Coverage files
    find build -name "*.gcda" -o -name "*.gcno" | head -20
    find pydcov_dir -type f | head -20
-   
+
    # Config
    cat .pydcov.json
    ```
@@ -392,4 +392,3 @@ If you're still stuck after trying these solutions:
 
 4. **File an issue:**
    Include the diagnostic information above when reporting issues
-

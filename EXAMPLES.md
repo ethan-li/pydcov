@@ -1,6 +1,6 @@
 # PyDCov Examples and Usage Guide
 
-This document provides comprehensive examples of how to use PyDCov for C/C++ code coverage measurement in various scenarios. PyDCov uses **unified incremental coverage collection** for all operations, providing optimal performance and flexibility without requiring mode selection.
+This document provides comprehensive examples of how to use PyDCov for C/C++ code coverage measurement in various scenarios. PyDCov uses **incremental coverage collection** for all operations, providing optimal performance and flexibility.
 
 ## 🚀 Quick Start Examples
 
@@ -446,7 +446,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          file: ./build/coverage/incremental_merged.info
+          file: ./pydcov_dir/merged.info
           flags: ${{ matrix.compiler }}
           name: codecov-${{ matrix.compiler }}
 ```
@@ -482,9 +482,9 @@ coverage:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: build/coverage/incremental_merged.info
+        path: pydcov_dir/merged.info
     paths:
-      - build/coverage/incremental_report/
+      - pydcov_dir/report/
     expire_in: 1 week
   coverage: '/TOTAL.*\s+(\d+%)$/'
 ```
@@ -528,7 +528,7 @@ pipeline {
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: 'build/coverage/incremental_report',
+                        reportDir: 'pydcov_dir/report',
                         reportFiles: 'index.html',
                         reportName: 'Coverage Report'
                     ])
@@ -575,7 +575,7 @@ pydcov add make test
 pydcov report
 
 # View coverage results
-open build/coverage/incremental_report/index.html
+open pydcov_dir/report/index.html
 ```
 
 ### Example: Integration with Existing Project
@@ -610,7 +610,7 @@ pydcov add ./my_custom_test_runner
 pydcov report
 
 # View results
-open build/coverage/incremental_report/index.html
+open pydcov_dir/report/index.html
 ```
 
 This comprehensive guide demonstrates PyDCov's flexibility and ease of use across different scenarios, from simple projects to complex CI/CD integrations.

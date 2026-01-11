@@ -26,85 +26,87 @@ class TestFunctionCoverage:
         with coverage and contains function coverage data in the reports.
         """
         # Check if the algorithm example has been built with coverage
-        algorithm_dir = Path(__file__).parent.parent / 'examples' / 'algorithm'
-        merged_info = algorithm_dir / 'pydcov_dir' / 'merged.info'
+        algorithm_dir = Path(__file__).parent.parent / "examples" / "algorithm"
+        merged_info = algorithm_dir / "pydcov_dir" / "merged.info"
 
         if not merged_info.exists():
-            pytest.skip("Algorithm example not built with coverage - run manual test workflow")
+            pytest.skip(
+                "Algorithm example not built with coverage - run manual test workflow"
+            )
 
         # Verify function coverage data exists
         info_content = merged_info.read_text()
 
         # Check for function coverage entries
-        assert 'FN:' in info_content, "No FN (function definition) entries found"
-        assert 'FNDA:' in info_content, "No FNDA (function data) entries found"
-        assert 'FNF:' in info_content, "No FNF (functions found) entry found"
-        assert 'FNH:' in info_content, "No FNH (functions hit) entry found"
+        assert "FN:" in info_content, "No FN (function definition) entries found"
+        assert "FNDA:" in info_content, "No FNDA (function data) entries found"
+        assert "FNF:" in info_content, "No FNF (functions found) entry found"
+        assert "FNH:" in info_content, "No FNH (functions hit) entry found"
 
         # Check for branch coverage entries
-        assert 'BRDA:' in info_content, "No BRDA (branch data) entries found"
-        assert 'BRF:' in info_content, "No BRF (branches found) entry found"
-        assert 'BRH:' in info_content, "No BRH (branches hit) entry found"
+        assert "BRDA:" in info_content, "No BRDA (branch data) entries found"
+        assert "BRF:" in info_content, "No BRF (branches found) entry found"
+        assert "BRH:" in info_content, "No BRH (branches hit) entry found"
 
         # Verify specific function coverage data
-        assert 'FNF:5' in info_content, "Expected 5 functions found"
-        assert 'FNH:5' in info_content, "Expected 5 functions hit (100% coverage)"
+        assert "FNF:5" in info_content, "Expected 5 functions found"
+        assert "FNH:5" in info_content, "Expected 5 functions hit (100% coverage)"
 
         # Verify specific functions are tracked
-        assert 'create_array' in info_content, "create_array function not tracked"
-        assert 'destroy_array' in info_content, "destroy_array function not tracked"
-        assert 'push_array' in info_content, "push_array function not tracked"
-        assert 'pop_array' in info_content, "pop_array function not tracked"
-        assert 'get_array' in info_content, "get_array function not tracked"
+        assert "create_array" in info_content, "create_array function not tracked"
+        assert "destroy_array" in info_content, "destroy_array function not tracked"
+        assert "push_array" in info_content, "push_array function not tracked"
+        assert "pop_array" in info_content, "pop_array function not tracked"
+        assert "get_array" in info_content, "get_array function not tracked"
 
         print("✓ Function coverage verification passed!")
         print("  - All 5 functions tracked and hit (100% function coverage)")
         print("  - Branch coverage data also present")
-
-
 
     def test_gcov_function_flag(self):
         """Test that gcov is called with the -f flag for function coverage."""
         from pydcov.utils.coverage_file_manager import CoverageFileManager
         from pydcov.utils.path_utils import PathManager
         from unittest.mock import patch, MagicMock
-        
+
         # Create a mock path manager
         with tempfile.TemporaryDirectory() as temp_dir:
-            build_dir = Path(temp_dir) / 'build'
+            build_dir = Path(temp_dir) / "build"
             build_dir.mkdir()
-            (build_dir / 'CMakeCache.txt').touch()
+            (build_dir / "CMakeCache.txt").touch()
 
-            pydcov_dir = Path(temp_dir) / 'pydcov_dir'
+            pydcov_dir = Path(temp_dir) / "pydcov_dir"
             pydcov_dir.mkdir()
 
             file_manager = CoverageFileManager(build_dir, pydcov_dir)
-            
+
             # Mock subprocess.run to capture the gcov command
-            with patch('pydcov.utils.coverage_file_manager.subprocess.run') as mock_run:
-                mock_run.return_value = MagicMock(returncode=0, stdout='', stderr='')
-                
+            with patch("pydcov.utils.coverage_file_manager.subprocess.run") as mock_run:
+                mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
                 # Create dummy files
-                gcda_file = Path(temp_dir) / 'test.gcda'
-                gcno_file = Path(temp_dir) / 'test.gcno'
+                gcda_file = Path(temp_dir) / "test.gcda"
+                gcno_file = Path(temp_dir) / "test.gcno"
                 working_dir = Path(temp_dir)
-                
+
                 gcda_file.touch()
                 gcno_file.touch()
-                
+
                 # Call the method
-                file_manager._process_individual_gcda_file(gcda_file, gcno_file, working_dir)
-                
+                file_manager._process_individual_gcda_file(
+                    gcda_file, gcno_file, working_dir
+                )
+
                 # Verify gcov was called with -f flag
                 assert mock_run.called, "subprocess.run was not called"
-                
+
                 # Get the first call arguments
                 call_args = mock_run.call_args_list[0]
                 gcov_cmd = call_args[0][0]  # First positional argument
-                
-                assert '-f' in gcov_cmd, f"gcov command missing -f flag: {gcov_cmd}"
+
+                assert "-f" in gcov_cmd, f"gcov command missing -f flag: {gcov_cmd}"
                 print(f"✓ gcov called with function coverage flag: {gcov_cmd}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main([__file__])

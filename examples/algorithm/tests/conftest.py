@@ -12,7 +12,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from examples.algorithm.tests.algorithm_test_utils import CoverageContext, cleanup_coverage_files, get_executable_path
+from examples.algorithm.tests.algorithm_test_utils import (
+    CoverageContext,
+    cleanup_coverage_files,
+    get_executable_path,
+)
 
 
 def pytest_configure(config):
@@ -20,9 +24,7 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -31,7 +33,7 @@ def pytest_collection_modifyitems(config, items):
         # Mark tests with "comprehensive" or "large" in name as slow
         if "comprehensive" in item.name or "large" in item.name:
             item.add_marker(pytest.mark.slow)
-        
+
         # Mark all tests as integration tests since they test the CLI
         item.add_marker(pytest.mark.integration)
 

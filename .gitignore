@@ -53,3 +53,6 @@ Thumbs.db
 
 # Dynamic array storage (used by tests)
 /tmp/pydcov_array.dat
+
+# PyDCov config (user-specific)
+.pydcov.json

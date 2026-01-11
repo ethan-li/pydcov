@@ -23,9 +23,7 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests"
-    )
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line(
         "markers", "statistical: marks tests that verify statistical calculations"
     )
@@ -41,12 +39,8 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "package: marks tests for PyDCov package functionality"
     )
-    config.addinivalue_line(
-        "markers", "cli: marks tests for CLI interface"
-    )
-    config.addinivalue_line(
-        "markers", "template: marks tests for template system"
-    )
+    config.addinivalue_line("markers", "cli: marks tests for CLI interface")
+    config.addinivalue_line("markers", "template: marks tests for template system")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -55,7 +49,7 @@ def pytest_collection_modifyitems(config, items):
         # Mark tests with "comprehensive" or "large" in name as slow
         if "comprehensive" in item.name or "large" in item.name:
             item.add_marker(pytest.mark.slow)
-        
+
         # Add module-specific markers based on test path
         test_path = str(item.fspath)
         if "/algorithm/" in test_path:
@@ -72,11 +66,11 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.template)
         elif "test_integration" in test_path:
             item.add_marker(pytest.mark.integration)
-        
+
         # Mark statistical calculation tests
         if "statistics" in item.name or "calculation" in item.name:
             item.add_marker(pytest.mark.statistical)
-        
+
         # Mark template and integration tests as slow by default
         if "template" in test_path or "integration" in test_path:
             item.add_marker(pytest.mark.slow)
@@ -89,31 +83,28 @@ def pytest_addoption(parser):
         "--coverage-build",
         action="store_true",
         default=False,
-        help="Run tests assuming coverage build was used"
+        help="Run tests assuming coverage build was used",
     )
     parser.addoption(
         "--executable-path",
         action="store",
         default=None,
-        help="Path to the algorithm executable"
+        help="Path to the algorithm executable",
     )
     parser.addoption(
         "--statistics-executable-path",
         action="store",
         default=None,
-        help="Path to the statistics executable"
+        help="Path to the statistics executable",
     )
     parser.addoption(
-        "--run-slow",
-        action="store_true",
-        default=False,
-        help="Run slow tests"
+        "--run-slow", action="store_true", default=False, help="Run slow tests"
     )
     parser.addoption(
         "--skip-integration",
         action="store_true",
         default=False,
-        help="Skip integration tests"
+        help="Skip integration tests",
     )
 
 
@@ -140,7 +131,7 @@ def temp_directory():
 def pydcov_installed():
     """Check if PyDCov is installed and available."""
     try:
-        result = subprocess.run(['pydcov', '--version'], capture_output=True, text=True)
+        result = subprocess.run(["pydcov", "--version"], capture_output=True, text=True)
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -150,7 +141,7 @@ def pydcov_installed():
 def cmake_available():
     """Check if CMake is available."""
     try:
-        result = subprocess.run(['cmake', '--version'], capture_output=True, text=True)
+        result = subprocess.run(["cmake", "--version"], capture_output=True, text=True)
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -160,7 +151,7 @@ def cmake_available():
 def make_available():
     """Check if make is available."""
     try:
-        result = subprocess.run(['make', '--version'], capture_output=True, text=True)
+        result = subprocess.run(["make", "--version"], capture_output=True, text=True)
         return result.returncode == 0
     except FileNotFoundError:
         return False
@@ -180,7 +171,9 @@ def algorithm_executable_path(request):
         return Path(path)
 
     # Default path
-    return Path(__file__).parent.parent / "examples" / "algorithm" / "build" / "algorithm"
+    return (
+        Path(__file__).parent.parent / "examples" / "algorithm" / "build" / "algorithm"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -191,13 +184,19 @@ def statistics_executable_path(request):
         return Path(path)
 
     # Default path
-    return Path(__file__).parent.parent / "examples" / "statistics" / "build" / "statistics"
+    return (
+        Path(__file__).parent.parent
+        / "examples"
+        / "statistics"
+        / "build"
+        / "statistics"
+    )
 
 
 def skip_if_no_pydcov():
     """Skip test if PyDCov is not installed."""
     try:
-        subprocess.run(['pydcov', '--version'], capture_output=True, check=True)
+        subprocess.run(["pydcov", "--version"], capture_output=True, check=True)
     except (FileNotFoundError, subprocess.CalledProcessError):
         pytest.skip("PyDCov not installed or not working")
 
@@ -205,8 +204,8 @@ def skip_if_no_pydcov():
 def skip_if_no_build_tools():
     """Skip test if build tools are not available."""
     try:
-        subprocess.run(['cmake', '--version'], capture_output=True, check=True)
-        subprocess.run(['make', '--version'], capture_output=True, check=True)
+        subprocess.run(["cmake", "--version"], capture_output=True, check=True)
+        subprocess.run(["make", "--version"], capture_output=True, check=True)
     except (FileNotFoundError, subprocess.CalledProcessError):
         pytest.skip("Build tools (CMake/make) not available")
 

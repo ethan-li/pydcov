@@ -24,8 +24,20 @@ def get_executable_path():
         # New examples structure paths
         project_root / "build" / "examples" / "algorithm" / "app" / "algorithm_cli",
         project_root / "examples" / "algorithm" / "app" / "algorithm_cli",
-        project_root / "build" / "Debug" / "examples" / "algorithm" / "app" / "algorithm_cli",
-        project_root / "build" / "Release" / "examples" / "algorithm" / "app" / "algorithm_cli",
+        project_root
+        / "build"
+        / "Debug"
+        / "examples"
+        / "algorithm"
+        / "app"
+        / "algorithm_cli",
+        project_root
+        / "build"
+        / "Release"
+        / "examples"
+        / "algorithm"
+        / "app"
+        / "algorithm_cli",
         # Legacy modular structure paths
         project_root / "build" / "algorithm" / "app" / "algorithm_cli",
         project_root / "algorithm" / "app" / "algorithm_cli",
@@ -35,7 +47,7 @@ def get_executable_path():
         project_root / "build" / "pydcov",
         project_root / "pydcov",
         project_root / "build" / "Debug" / "pydcov",
-        project_root / "build" / "Release" / "pydcov"
+        project_root / "build" / "Release" / "pydcov",
     ]
 
     for path in possible_paths:
@@ -44,14 +56,18 @@ def get_executable_path():
 
     # If not found, try to find algorithm_cli in PATH
     try:
-        result = subprocess.run(["which", "algorithm_cli"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["which", "algorithm_cli"], capture_output=True, text=True, check=True
+        )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         pass
 
     # Try legacy pydcov in PATH
     try:
-        result = subprocess.run(["which", "pydcov"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["which", "pydcov"], capture_output=True, text=True, check=True
+        )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         pass
@@ -65,26 +81,22 @@ def get_executable_path():
 def run_command(args, check=False, **kwargs):
     """
     Run the pydcov command with the given arguments.
-    
+
     Args:
         args: List of command arguments (without the executable name)
         check: If True, raise CalledProcessError on non-zero exit
         **kwargs: Additional arguments to pass to subprocess.run
-    
+
     Returns:
         subprocess.CompletedProcess object
     """
     executable = get_executable_path()
     full_command = [executable] + args
-    
+
     # Set default values for subprocess.run
-    defaults = {
-        'capture_output': True,
-        'text': True,
-        'check': check
-    }
+    defaults = {"capture_output": True, "text": True, "check": check}
     defaults.update(kwargs)
-    
+
     try:
         result = subprocess.run(full_command, **defaults)
         return result
@@ -104,32 +116,33 @@ def parse_int_list(output_line):
 def assert_command_success(args, expected_output=None):
     """
     Assert that a command runs successfully and optionally check output.
-    
+
     Args:
         args: Command arguments
         expected_output: Expected stdout (if provided)
-    
+
     Returns:
         subprocess.CompletedProcess object
     """
     result = run_command(args)
     assert result.returncode == 0, f"Command failed: {args}\nStderr: {result.stderr}"
-    
+
     if expected_output is not None:
         actual_output = result.stdout.strip()
-        assert actual_output == str(expected_output), \
-            f"Expected '{expected_output}', got '{actual_output}'"
-    
+        assert actual_output == str(
+            expected_output
+        ), f"Expected '{expected_output}', got '{actual_output}'"
+
     return result
 
 
 def assert_command_failure(args):
     """
     Assert that a command fails (returns non-zero exit code).
-    
+
     Args:
         args: Command arguments
-    
+
     Returns:
         subprocess.CompletedProcess object
     """
@@ -147,7 +160,7 @@ def setup_coverage_environment():
 
     # Set LLVM_PROFILE_FILE to generate unique files per process
     # Using %p (process ID) and %m (module signature) for uniqueness
-    os.environ['LLVM_PROFILE_FILE'] = str(coverage_dir / "coverage-%p-%m.profraw")
+    os.environ["LLVM_PROFILE_FILE"] = str(coverage_dir / "coverage-%p-%m.profraw")
 
     # For GCC coverage (gcov looks for .gcda files in the same directory as .gcno files)
     # No special environment setup needed for GCC
@@ -159,12 +172,12 @@ def cleanup_coverage_files():
     """Clean up coverage files from previous runs."""
     project_root = get_project_root()
     build_dir = project_root / "build"
-    
+
     if build_dir.exists():
         # Remove gcov files
         for gcov_file in build_dir.glob("**/*.gcda"):
             gcov_file.unlink()
-        
+
         # Remove clang coverage files
         for prof_file in build_dir.glob("**/*.profraw"):
             prof_file.unlink()
@@ -172,12 +185,12 @@ def cleanup_coverage_files():
 
 class CoverageContext:
     """Context manager for coverage collection during tests."""
-    
+
     def __enter__(self):
         setup_coverage_environment()
         cleanup_coverage_files()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Coverage files are left for collection by the build system
         pass

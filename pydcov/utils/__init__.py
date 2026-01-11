@@ -20,5 +20,5 @@ __all__ = [
     "get_logger",
     "PathManager",
     "CMakeHelper",
-    "TestExecutor"
+    "TestExecutor",
 ]

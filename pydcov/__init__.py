@@ -31,8 +31,4 @@ from .core.incremental_coverage import IncrementalCoverageManager
 from .utils.compiler_detection import CompilerDetector
 from .utils.logging_config import setup_logging
 
-__all__ = [
-    "IncrementalCoverageManager",
-    "CompilerDetector",
-    "setup_logging"
-]
+__all__ = ["IncrementalCoverageManager", "CompilerDetector", "setup_logging"]

@@ -7,6 +7,4 @@ This package contains the incremental coverage management class:
 
 from .incremental_coverage import IncrementalCoverageManager
 
-__all__ = [
-    "IncrementalCoverageManager"
-]
+__all__ = ["IncrementalCoverageManager"]

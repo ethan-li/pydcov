@@ -16,21 +16,22 @@ A streamlined **pure Python** incremental coverage tracking system for C/C++ pro
 - **🌐 Cross-Platform**: Linux, macOS, Windows support
 - **⚡ Multiple Compilers**: GCC/gcov and Clang/llvm-cov support
 - **🔧 CMake Integration**: Seamless integration with CMake build systems
-- **📊 Modern Python API**: Clean, well-documented Python interface
+- **📊 Rich Reporting**: HTML, XML, and LCOV format reports
+- **📥 Collect-Only Mode**: Skip test execution and collect existing coverage files
 
 ## 🚀 Quick Start
 
 ### Installation
 
-### Option 1: Python Package (Recommended)
+#### Option 1: Python Package (Recommended)
 
 ```bash
 pip install pydcov
 ```
 
-### Option 2: Standalone Executable
+#### Option 2: Standalone Executable
 
-Download pre-built standalone executables from the [GitHub Releases](https://github.com/ethan-li/pydcov/releases) page:
+Download pre-built standalone executables from [GitHub Releases](https://github.com/ethan-li/pydcov/releases) page:
 
 - **Linux (x64)**: `pydcov-linux-x64`
 - **macOS (ARM64)**: `pydcov-macos-arm64`
@@ -43,7 +44,7 @@ chmod +x pydcov-linux-x64  # or pydcov-macos-arm64
 ./pydcov-linux-x64 --version
 ```
 
-### Option 3: Build Your Own Executable
+#### Option 3: Build Your Own Executable
 
 ```bash
 git clone https://github.com/ethan-li/pydcov.git
@@ -82,35 +83,6 @@ pydcov add python -m pytest tests/
 pydcov report
 ```
 
-## ✨ Features
-
-- **🔧 Easy Installation**: Simple `pip install pydcov`
-- **🐍 Pure Python**: No CMake dependencies for coverage operations
-- **🔄 Cross-Platform**: Linux, macOS, Windows support
-- **⚙️ Multiple Compilers**: GCC/gcov and Clang/llvm-cov
-- **📊 Incremental Coverage**: Efficient incremental collection and reporting
-- **🧪 Framework-Agnostic**: Works with any testing framework
-- **🎯 CMake Integration**: Optional CMake build system support
-- **📈 Rich Reporting**: HTML, XML, and LCOV format reports
-- **🚀 Better Error Handling**: Comprehensive error reporting and validation
-
-## 🎯 Incremental Coverage Approach
-
-PyDCov focuses on **incremental coverage collection** for optimal performance and flexibility:
-
-- **Cumulative Collection**: Multiple test runs automatically accumulate coverage data
-- **Optimal Performance**: Efficient data collection and merging for large projects
-- **Flexible Workflow**: Add coverage data from different test runs as needed
-- **Clean Separation**: Clear commands for initialization, collection, and reporting
-
-### How It Works
-
-1. **Initialize**: Set up incremental coverage tracking with `pydcov init`
-2. **Collect**: Add coverage data from test runs with `pydcov add test_command`
-3. **Merge**: Combine coverage data with `pydcov merge`
-4. **Report**: Generate reports at any time with `pydcov report`
-5. **Clean**: Reset for fresh collection with `pydcov clean`
-
 ## 📋 Command Reference
 
 ### Incremental Coverage Commands
@@ -119,10 +91,12 @@ PyDCov focuses on **incremental coverage collection** for optimal performance an
 pydcov init                              # Initialize incremental tracking
 pydcov init --pydcov-dir /path/to/data   # Initialize with custom coverage directory
 pydcov add python -m pytest tests/      # Add coverage data from test run
+pydcov add --collect-only                  # Collect existing coverage files without running tests
 pydcov merge                             # Merge coverage data
 pydcov report                            # Generate incremental report
 pydcov status                            # Show incremental status
 pydcov clean                             # Clean all coverage data
+pydcov export --format lcov               # Export coverage data (lcov, json, cobertura)
 ```
 
 ### Project Setup Commands
@@ -135,7 +109,7 @@ pydcov --help                  # Show help
 
 ## 📁 Coverage Directory Management
 
-PyDCov now supports flexible coverage directory management:
+PyDCov supports flexible coverage directory management:
 
 ### Default Behavior
 By default, PyDCov creates a `pydcov_dir` directory in your current working directory to store all coverage data.
@@ -168,10 +142,126 @@ pydcov_dir/
 ├── add_20240101_120030_456/    # Second test run
 │   ├── coverage-*.profraw
 │   └── *.gcda
-├── merged.profdata             # Merged coverage data
-└── report/                     # Generated reports
+├── merged.profdata                  # Merged coverage data (Clang)
+├── merged.info                     # Merged coverage data (GCC)
+└── report/                        # Generated reports
     └── index.html
 ```
+
+## 🎯 Incremental Coverage Approach
+
+PyDCov focuses on **incremental coverage collection** for optimal performance and flexibility:
+
+- **Cumulative Collection**: Multiple test runs automatically accumulate coverage data
+- **Optimal Performance**: Efficient data collection and merging for large projects
+- **Flexible Workflow**: Add coverage data from different test runs as needed
+- **Clean Separation**: Clear commands for initialization, collection, and reporting
+
+### How It Works
+
+1. **Initialize**: Set up incremental coverage tracking with `pydcov init`
+2. **Collect**: Add coverage data from test runs with `pydcov add test_command` or `pydcov add --collect-only`
+3. **Merge**: Combine coverage data with `pydcov merge`
+4. **Report**: Generate reports at any time with `pydcov report`
+5. **Clean**: Reset for fresh collection with `pydcov clean`
+
+## 📥 Collect-Only Mode
+
+The `--collect-only` option allows you to skip test execution and directly collect existing coverage files. This is particularly useful for:
+
+- Running tests using custom scripts or manually
+- Tests have already been completed by other tools
+- Need to collect coverage data from multiple test runs in stages
+- CI/CD environments with complex test execution workflows
+
+### Usage Examples
+
+#### Collect After Manual Test Execution
+
+```bash
+# Build program with coverage enabled
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DPYDCOV_ENABLE_COVERAGE=1
+cmake --build build
+
+# Manually run test programs
+./build/test_program1
+./build/test_program2
+
+# Collect existing coverage files
+pydcov init --build-root build
+pydcov add --collect-only
+pydcov merge
+pydcov report
+```
+
+#### Staged Collection (Clang)
+
+```bash
+# Initialize
+pydcov init --build-root build
+
+# Run and collect first group of tests
+./build/test_group1
+pydcov add --collect-only
+
+# Run and collect second group of tests
+./build/test_group2
+pydcov add --collect-only
+
+# Merge and generate report
+pydcov merge
+pydcov report
+```
+
+#### Mixed Use of Standard Mode and Collect-Only Mode
+
+```bash
+pydcov init --build-root build
+
+# Run pytest in standard mode
+pydcov add python -m pytest tests/unit/
+
+# Collect after manually running integration tests
+./build/integration_tests
+pydcov add --collect-only
+
+# Run pytest again in standard mode
+pydcov add python -m pytest tests/integration/
+
+# Merge and generate report
+pydcov merge
+pydcov report
+```
+
+### How It Works
+
+#### For Clang (llvm-cov)
+
+- **File Types**: `.profraw`
+- **Accumulation**: Each run generates new `.profraw` files (if using `LLVM_PROFILE_FILE` with wildcards)
+- **Timestamp Filtering**: Only collects files modified after the last collection
+- **Recommended**: Ensure `LLVM_PROFILE_FILE` uses wildcards (e.g., `coverage-%p-%m.profraw`)
+
+#### For GCC (gcov)
+
+- **File Types**: `.gcda`, `.gcno`
+- **Accumulation**: `.gcda` files are cumulative; multiple runs of the same program update the same file
+- **Collection Behavior**: Always collects all `.gcda` files (because they are cumulative)
+- **Recommended**: Run all tests first, then collect only once
+
+### Best Practices
+
+#### For Clang Users
+
+1. **Use Wildcards**: Ensure `LLVM_PROFILE_FILE` uses wildcards (e.g., `%p-%m`)
+2. **Collect in Stages**: Call `pydcov add --collect-only` after each new test run
+3. **Auto Merge**: All collected data will be merged during the `merge` phase
+
+#### For GCC Users
+
+1. **Run All Tests First**: Run all required tests before collecting
+2. **Single Collection**: Call `pydcov add --collect-only` only once
+3. **Avoid Duplication**: Do not call collect-only repeatedly for the same tests
 
 ## 💻 Python API
 
@@ -271,7 +361,23 @@ pydcov add python -m pytest tests/integration/
 pydcov report
 
 # View results
-open build/coverage/incremental_report/index.html
+open pydcov_dir/report/index.html
+```
+
+### Collect-Only Workflow for Manual Testing
+
+```bash
+# Initialize
+pydcov init
+
+# Run tests manually using your custom workflow
+./build/unit_tests
+./build/integration_tests
+
+# Collect coverage without running tests
+pydcov add --collect-only
+pydcov merge
+pydcov report
 ```
 
 ### Integration with Existing Projects
@@ -313,26 +419,10 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          file: ./build/coverage/incremental_merged.info
+          file: ./pydcov_dir/merged.info
 ```
 
 ## 🔍 Advanced Features
-
-### Incremental Coverage Collection
-
-PyDCov provides efficient incremental coverage collection for optimal performance:
-
-```bash
-# Initialize tracking (specify build directory once)
-pydcov init --build-root build
-
-# Add coverage from multiple test runs (no --build-root needed)
-pydcov add python -m pytest tests/module1/
-pydcov add python -m pytest tests/module2/
-
-# Merge and generate report
-pydcov merge
-```
 
 ### Custom Test Commands
 
@@ -362,9 +452,13 @@ pydcov add --timeout 1800 python -m pytest tests/slow/
 pydcov report
 
 # Output includes:
-# - build/coverage/incremental_report/index.html  (Interactive HTML)
-# - build/coverage/incremental_merged.profdata    (Clang format)
-# - build/coverage/incremental_merged.info        (LCOV format)
+# - pydcov_dir/report/index.html  (Interactive HTML)
+# - pydcov_dir/merged.profdata    (Clang format)
+# - pydcov_dir/merged.info        (LCOV format)
+
+# Export to specific formats
+pydcov export --format lcov --output coverage.info
+pydcov export --format json --output coverage.json
 ```
 
 ## 🛠️ Development and Examples
@@ -508,6 +602,9 @@ pydcov init-cmake
 # Ensure tests are actually running
 pydcov add echo test command here
 
+# Or collect existing files with collect-only
+pydcov add --collect-only
+
 # Check incremental coverage status
 pydcov status
 ```
@@ -548,6 +645,7 @@ PyDCov focuses on **incremental coverage collection** for optimal performance an
 - **Flexible Workflow**: Add coverage from different test runs
 - **Cross-Platform**: Works consistently across Linux, macOS, Windows
 - **Framework Agnostic**: Works with any testing framework
+- **Collect-Only Mode**: Support for existing test execution workflows
 
 ### Getting Help
 
