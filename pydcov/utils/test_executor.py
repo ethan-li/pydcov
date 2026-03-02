@@ -224,5 +224,5 @@ class TestExecutor:
                 )
                 result = subprocess.run([which_cmd, cmd[0]], capture_output=True)
                 return result.returncode == 0
-            except:
+            except Exception:
                 return False

@@ -452,7 +452,7 @@ class CoverageFileManager:
                 # Clean up this .gcov file
                 try:
                     gcov_file.unlink()
-                except:
+                except Exception:
                     pass
 
             # Step 4: Merge successful individual .info files into final .info file
