@@ -32,6 +32,11 @@ class CoverageFileManager:
         """Set the current add subdirectory for coverage file collection."""
         self.current_add_subdir = add_subdir
 
+
+# =============================================================================
+# SECTION 1: Initialization
+# =============================================================================
+
     def init_incremental(self) -> bool:
         """
         Initialize incremental coverage collection.
@@ -55,6 +60,11 @@ class CoverageFileManager:
         except Exception as e:
             self.logger.error(f"Failed to initialize incremental coverage: {e}")
             return False
+
+
+# =============================================================================
+# SECTION 2: Collection
+# =============================================================================
 
     def collect_coverage_files(self, collect_only: bool = False) -> Tuple[int, int]:
         """
@@ -173,6 +183,11 @@ class CoverageFileManager:
         except Exception as e:
             self.logger.error(f"Failed to collect coverage files: {e}")
             return 0, 0
+
+
+# =============================================================================
+# SECTION 3: Merging
+# =============================================================================
 
     def merge_coverage_data(self, compiler: str = None) -> bool:
         """
@@ -858,6 +873,11 @@ class CoverageFileManager:
             self.logger.error(f"Failed to merge GCC coverage data: {e}")
             return False
 
+
+# =============================================================================
+# SECTION 4: Reporting
+# =============================================================================
+
     def generate_report(
         self, compiler: str = None, executables: List[Path] = None
     ) -> bool:
@@ -1047,6 +1067,11 @@ class CoverageFileManager:
         except Exception as e:
             self.logger.error(f"Failed to generate GCC report: {e}")
             return False
+
+
+# =============================================================================
+# SECTION 5: Status
+# =============================================================================
 
     def get_status(self) -> dict:
         """Get current status of pydcov coverage."""
@@ -1305,6 +1330,11 @@ class CoverageFileManager:
             f.write(html_content)
 
         self.logger.debug(f"Created combined index at {index_file}")
+
+
+# =============================================================================
+# SECTION 6: Exporting
+# =============================================================================
 
     def export_coverage_data(
         self, format_type: str = "lcov", output_file: Path = None
