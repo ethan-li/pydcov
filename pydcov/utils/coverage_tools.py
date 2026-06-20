@@ -7,6 +7,7 @@ replacing the CMake-based tool detection with a more maintainable Python impleme
 
 import os
 import platform
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -205,3 +206,84 @@ class CoverageToolManager:
             "missing": missing,
             "cache": self._tool_cache.copy(),
         }
+
+    def get_lcov_version(self) -> Tuple[bool, str]:
+        """
+        Get the installed lcov version.
+
+        Returns:
+            Tuple of (found, version_string) where found is True if lcov was
+            located and version could be determined, and version_string is
+            the version info (e.g., "2.0" or "1.14") or an error message.
+        """
+        lcov_path = self.find_tool("lcov")
+        if not lcov_path:
+            return False, "lcov not found in PATH"
+
+        try:
+            result = subprocess.run(
+                [lcov_path, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            output = result.stdout.strip() or result.stderr.strip()
+
+            # lcov outputs something like "lcov version 2.0" or "LCOV version 1.14"
+            match = re.search(r"(?:lcov|lcoV|LCOV)\s+version\s+(\d+\.\d+)", output, re.IGNORECASE)
+            if match:
+                return True, match.group(1)
+
+            # Fallback: return raw output if version pattern not matched
+            if output:
+                return True, output
+
+            return False, "Could not determine lcov version"
+
+        except subprocess.TimeoutExpired:
+            return False, "lcov --version timed out"
+        except Exception as e:
+            return False, f"Failed to get lcov version: {e}"
+
+    def validate_lcov_version(self, min_version: str = "2.0") -> Tuple[bool, str]:
+        """
+        Validate that lcov is installed and meets the minimum version requirement.
+
+        Args:
+            min_version: Minimum required version (default: "2.0")
+
+        Returns:
+            Tuple of (is_valid, message) where message describes the result
+        """
+        found, version_or_error = self.get_lcov_version()
+
+        if not found:
+            return False, (
+                f"lcov is required but was not found. "
+                f"Install lcov >= {min_version} (e.g., 'sudo apt install lcov' or 'brew install lcov')"
+            )
+
+        # Parse versions for comparison
+        try:
+            installed_parts = version_or_error.split(".")
+            installed_major = int(installed_parts[0])
+            installed_minor = int(installed_parts[1]) if len(installed_parts) > 1 else 0
+
+            required_parts = min_version.split(".")
+            required_major = int(required_parts[0])
+            required_minor = int(required_parts[1]) if len(required_parts) > 1 else 0
+
+            if installed_major > required_major:
+                return True, f"lcov version {version_or_error} (meets requirement >= {min_version})"
+            if installed_major == required_major and installed_minor >= required_minor:
+                return True, f"lcov version {version_or_error} (meets requirement >= {min_version})"
+
+            return False, (
+                f"lcov version {version_or_error} is too old. "
+                f"Version {min_version} or higher is required. "
+                f"Please update: 'sudo apt install --upgrade lcov' or 'brew upgrade lcov'"
+            )
+
+        except (ValueError, IndexError):
+            # Could not parse version, but lcov was found - be permissive
+            return True, f"lcov found ({version_or_error}), version check skipped (unparseable)"

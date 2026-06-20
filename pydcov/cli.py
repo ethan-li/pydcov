@@ -77,6 +77,13 @@ def add_init_arguments(parser):
         type=Path,
         help="Directory for pydcov coverage data (default: current working directory)",
     )
+    parser.add_argument(
+        "--lcov-version",
+        type=str,
+        default="2.0",
+        help="Minimum required lcov version (default: 2.0). "
+        "Set to 0 to disable version check, or specify a version like '1.14' or '2.0'",
+    )
 
 
 def create_init_cmake_parser(subparsers):
@@ -205,10 +212,12 @@ def handle_incremental_command(args) -> int:
         is_init_command = args.subcommand == "init"
         build_root = getattr(args, "build_root", None)
         pydcov_dir = getattr(args, "pydcov_dir", None)
+        lcov_version = getattr(args, "lcov_version", "2.0")
         manager = IncrementalCoverageManager(
             build_root=build_root,
             pydcov_dir=pydcov_dir,
             is_init_command=is_init_command,
+            lcov_version=lcov_version,
         )
 
         if args.subcommand == "init":
