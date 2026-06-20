@@ -61,7 +61,7 @@ include = ["pydcov*"]
 pydcov = ["cmake/*.cmake"]
 
 [tool.setuptools_scm]
-version_file = "pydcov/_version.py"
+write_to = "pydcov/_version.py"
 local_scheme = "no-local-version"
 tag_regex = "^[vV]?(\\d+\\.\\d+\\.\\d+)$"
 
