@@ -64,7 +64,6 @@ pydcov = ["cmake/*.cmake"]
 version_file = "pydcov/_version.py"
 local_scheme = "no-local-version"
 tag_regex = "^[vV]?(\\d+\\.\\d+\\.\\d+)$"
-capture_log = true
 
 [tool.black]
 line-length = 88
