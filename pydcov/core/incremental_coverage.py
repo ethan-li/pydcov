@@ -29,6 +29,7 @@ class IncrementalCoverageManager:
         build_root: Path | None = None,
         pydcov_dir: Path | None = None,
         is_init_command: bool = False,
+        lcov_version: str = "2.0",
     ):
         """
         Initialize IncrementalCoverageManager.
@@ -37,9 +38,11 @@ class IncrementalCoverageManager:
             build_root: Path to CMake build directory. If None, will try to load from config or auto-detect.
             pydcov_dir: Path to pydcov directory. If None, will try to load from config or default to current directory.
             is_init_command: True if this is being called from the init command
+            lcov_version: Minimum required lcov version (default: "2.0"). "0" disables the check.
         """
         self.logger = get_logger()
         self.config = PyDCovConfig()
+        self.lcov_version = lcov_version
 
         # For init command, use provided build_root or auto-detect
         # For other commands, try to load from config first
@@ -98,6 +101,17 @@ class IncrementalCoverageManager:
             self.logger.error(f"Missing required coverage tools: {', '.join(missing)}")
             self.logger.error("Please install the required tools before proceeding")
             raise RuntimeError(f"Missing coverage tools: {missing}")
+
+        # Validate lcov version if lcov is being used (gcc compiler) and version check is not disabled
+        if compiler == "gcc" and self.lcov_version != "0":
+            from pydcov.utils.coverage_tools import CoverageToolManager
+            tool_manager = CoverageToolManager()
+            is_valid, message = tool_manager.validate_lcov_version(self.lcov_version)
+            if not is_valid:
+                self.logger.error(f"lcov version check failed: {message}")
+                raise RuntimeError(f"lcov version check failed: {message}")
+            else:
+                self.logger.info(message)
 
     def init(self) -> bool:
         """
