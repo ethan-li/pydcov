@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pydcov"
-version = "1.0.6"
+dynamic = ["version"]
 description = "Incremental C/C++ code coverage tools for CMake projects"
 readme = "README_PACKAGE.md"
 license = "MIT"
@@ -59,6 +59,12 @@ include = ["pydcov*"]
 
 [tool.setuptools.package-data]
 pydcov = ["cmake/*.cmake"]
+
+[tool.setuptools_scm]
+version_file = "pydcov/_version.py"
+local_scheme = "no-local-version"
+tag_regex = "^[vV]?(\\d+\\.\\d+\\.\\d+)$"
+capture_log = true
 
 [tool.black]
 line-length = 88
