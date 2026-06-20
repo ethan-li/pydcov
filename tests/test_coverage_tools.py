@@ -10,6 +10,7 @@ import pytest
 import subprocess
 import shutil
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 from pydcov.utils.coverage_tools import CoverageToolManager
 
@@ -27,6 +28,79 @@ class TestLcovVersionDetection:
         assert found is False
         assert "not found" in result.lower()
 
+    def test_get_lcov_version_parses_version_correctly(self):
+        """Test get_lcov_version correctly parses lcov version output."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        # Mock lcov being found and returning version 2.0
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 2.0",
+                    stderr=""
+                )
+                found, version = manager.get_lcov_version()
+
+                assert found is True
+                assert version == "2.0"
+                mock_run.assert_called_once_with(
+                    ['/usr/bin/lcov', '--version'],
+                    capture_output=True, text=True, timeout=10
+                )
+
+    def test_get_lcov_version_parses_1_14(self):
+        """Test get_lcov_version correctly parses lcov version 1.14."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="LCOV version 1.14",
+                    stderr=""
+                )
+                found, version = manager.get_lcov_version()
+
+                assert found is True
+                assert version == "1.14"
+
+    def test_get_lcov_version_handles_lowercase_lcov(self):
+        """Test get_lcov_version handles lowercase 'lcov' in output."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 1.16",
+                    stderr=""
+                )
+                found, version = manager.get_lcov_version()
+
+                assert found is True
+                assert version == "1.16"
+
+    def test_get_lcov_version_returns_raw_on_unparseable_output(self):
+        """Test get_lcov_version returns raw output when version pattern not matched."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="some unexpected output",
+                    stderr=""
+                )
+                found, result = manager.get_lcov_version()
+
+                assert found is True
+                assert result == "some unexpected output"
+
     def test_validate_lcov_version_when_not_found(self):
         """Test validate_lcov_version when lcov is not installed."""
         manager = CoverageToolManager()
@@ -37,87 +111,100 @@ class TestLcovVersionDetection:
         assert "not found" in message.lower()
         assert "2.0" in message  # Should mention the required version
 
-    def test_validate_lcov_version_minimum_version_in_error(self):
-        """Test that validate_lcov_version mentions the required version in error."""
+    def test_validate_lcov_version_passes_for_2_0_with_2_0_required(self):
+        """Test validate_lcov_version passes when installed version meets requirement."""
         manager = CoverageToolManager()
         manager._tool_cache.clear()
 
-        is_valid, message = manager.validate_lcov_version("1.14")
-        assert is_valid is False
-        # Should provide install instructions
-        assert "apt" in message.lower() or "brew" in message.lower() or "install" in message.lower()
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 2.0",
+                    stderr=""
+                )
+                is_valid, message = manager.validate_lcov_version("2.0")
 
-    def test_lcov_version_parsing(self):
-        """Test that lcov version output is properly parsed."""
-        manager = CoverageToolManager()
+                assert is_valid is True
+                assert "2.0" in message
+                assert "meets requirement" in message
 
-        # Test version comparison logic directly
-        # This tests the parsing without requiring lcov to be installed
-        min_version = "2.0"
-
-        # Manually test version comparison
-        installed_parts = "2.0".split(".")
-        installed_major = int(installed_parts[0])
-        installed_minor = int(installed_parts[1]) if len(installed_parts) > 1 else 0
-
-        required_parts = min_version.split(".")
-        required_major = int(required_parts[0])
-        required_minor = int(required_parts[1]) if len(required_parts) > 1 else 0
-
-        assert installed_major >= required_major
-        assert installed_minor >= required_minor
-
-    def test_lcov_version_1_14_should_fail_for_2_0_requirement(self):
-        """Test that version 1.14 fails when 2.0 is required."""
-        manager = CoverageToolManager()
-
-        # Test version 1.14 against requirement 2.0
-        installed_parts = "1.14".split(".")
-        installed_major = int(installed_parts[0])
-        installed_minor = int(installed_parts[1]) if len(installed_parts) > 1 else 0
-
-        required_major = 2
-        required_minor = 0
-
-        assert installed_major < required_major or (installed_major == required_major and installed_minor < required_minor)
-
-    def test_lcov_version_2_0_should_pass_for_2_0_requirement(self):
-        """Test that version 2.0 passes when 2.0 is required."""
-        installed_major = 2
-        installed_minor = 0
-        required_major = 2
-        required_minor = 0
-
-        assert installed_major == required_major and installed_minor >= required_minor
-
-    def test_lcov_version_2_1_should_pass_for_2_0_requirement(self):
-        """Test that version 2.1 passes when 2.0 is required."""
-        installed_major = 2
-        installed_minor = 1
-        required_major = 2
-        required_minor = 0
-
-        assert installed_major == required_major and installed_minor >= required_minor
-
-    def test_lcov_version_3_0_should_pass_for_2_0_requirement(self):
-        """Test that version 3.0 passes when 2.0 is required."""
-        installed_major = 3
-        installed_minor = 0
-        required_major = 2
-        required_minor = 0
-
-        assert installed_major > required_major
-
-    def test_validate_lcov_version_disable_with_zero(self):
-        """Test that version check can be disabled with '0'."""
+    def test_validate_lcov_version_passes_for_newer_version(self):
+        """Test validate_lcov_version passes when installed version exceeds requirement."""
         manager = CoverageToolManager()
         manager._tool_cache.clear()
 
-        # When lcov_version is "0", the version check should be bypassed
-        # This is handled at a higher level, but we verify the manager accepts it
-        is_valid, message = manager.validate_lcov_version("0")
-        # The method still checks, but "0" is an unusual version that would fail parsing
-        # The key is that the calling code passes "0" to disable the check entirely
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 2.3",
+                    stderr=""
+                )
+                is_valid, message = manager.validate_lcov_version("2.0")
+
+                assert is_valid is True
+                assert "2.3" in message
+
+    def test_validate_lcov_version_fails_for_old_version(self):
+        """Test validate_lcov_version fails when installed version is too old."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 1.14",
+                    stderr=""
+                )
+                is_valid, message = manager.validate_lcov_version("2.0")
+
+                assert is_valid is False
+                assert "1.14" in message
+                assert "too old" in message.lower()
+                assert "2.0" in message
+                # Should provide update instructions
+                assert "apt" in message.lower() or "brew" in message.lower()
+
+    def test_validate_lcov_version_fails_for_1_16_when_2_0_required(self):
+        """Test validate_lcov_version fails for 1.16 when 2.0 is required."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 1.16",
+                    stderr=""
+                )
+                is_valid, message = manager.validate_lcov_version("2.0")
+
+                assert is_valid is False
+                assert "1.16" in message
+                assert "too old" in message.lower()
+
+    def test_validate_lcov_version_error_message_is_human_readable(self):
+        """Test that error messages are human-readable and direct."""
+        manager = CoverageToolManager()
+        manager._tool_cache.clear()
+
+        with patch.object(manager, 'find_tool', return_value='/usr/bin/lcov'):
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = MagicMock(
+                    returncode=0,
+                    stdout="lcov version 1.14",
+                    stderr=""
+                )
+                is_valid, message = manager.validate_lcov_version("2.0")
+
+                # Message should be a single, coherent sentence
+                assert "lcov" in message.lower()
+                assert "2.0" in message
+                # Should not contain technical jargon or tracebacks
+                assert "traceback" not in message.lower()
+                assert "exception" not in message.lower()
 
 
 class TestCoverageToolManagerBasics:
