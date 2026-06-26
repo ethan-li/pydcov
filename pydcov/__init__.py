@@ -23,7 +23,13 @@ Command-line usage:
     pydcov init-cmake
 """
 
-__version__ = "1.0.3"
+# Version is dynamically set by setuptools_scm at build time
+# For development/import without building, use a placeholder
+try:
+    from ._version import version as __version__
+except ImportError:
+    __version__ = "0.0.0.dev0"
+
 __author__ = "Ethan Li"
 
 # Import main classes for easy access
